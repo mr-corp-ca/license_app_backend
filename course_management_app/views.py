@@ -17,16 +17,29 @@ class CourseApiView(APIView):
         user = request.user
         services_list = request.POST.get('services')
         license_category_list = request.POST.get('license_category')
+        lesson_numbers = request.POST.get('lesson_numbers')
+        lessons = request.POST.get('lessons')
 
         if type(services_list) == str:
             services_list = json.loads(services_list) 
 
         if type(license_category_list) == str:
             license_category_list = json.loads(license_category_list) 
+
+        if type(lessons) == str:
+            lessons = json.loads(lessons) 
+
         try:
             request.data._mutable = True
         except:
             pass
+
+        lesson_count = len(lessons)
+        if lesson_numbers != lesson_count:
+            return Response(
+                {'success': False, 'response': {'message': 'The total number of lessons in the lessons list should match the value provided in the lesson_numbers field.'}},
+                status=status.HTTP_400_BAD_REQUEST)
+
         request.data['user'] = user.id
         serializer = CourseSerializer(data=request.data)
         if serializer.is_valid():
@@ -37,6 +50,9 @@ class CourseApiView(APIView):
             if services_list:
                 for service in services_list:
                     course.services.add(service)
+            if lessons:
+                for lesson in lessons:
+                    Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
             serializer = GETCourseSerializer(course)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
         else:

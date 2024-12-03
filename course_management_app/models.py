@@ -6,7 +6,6 @@ from utils_app.models import BaseModelWithCreatedInfo
 # Create your models here.
 
 
-
 class LicenseCategory(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255)
 
@@ -27,8 +26,11 @@ class Course(BaseModelWithCreatedInfo):
 
     def __str__(self):
         return self.title
-    
 
+class Lesson(BaseModelWithCreatedInfo):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='Lession/images')
 
 class Vehicle(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

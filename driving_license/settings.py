@@ -20,6 +20,20 @@ ALLOWED_HOSTS = [
 
                  ]
 
+
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://192.168.10.16:9000/'
+
+]
+
+CSRF_COOKIE_SECURE = True
+CORS_ORIGIN_ALLOW_ALL = True
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
