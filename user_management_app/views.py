@@ -16,16 +16,18 @@ from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password, check_password
+from django.core.exceptions import ObjectDoesNotExist
 import stripe
 from django.conf import settings
-stripe.api_key = settings.STRIPE_SECRET_KEY_TEST
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 # Create your views here.
 
 
 
-class SignUpView(APIView):
+class UserApiView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -85,55 +87,105 @@ class SignUpView(APIView):
         return Response({"success": True, 'response': {"message":"User created successfully"}}, status=status.HTTP_201_CREATED)
 
 
-
-
-class UserProfileUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def get(self, request):
         user = request.user
-        serializer = UserGETSerializer(user)
+        serializer = DefaultUserSerializer(user)
         return Response({"success": True, 'response': {"data": serializer.data}}, status=status.HTTP_200_OK)
 
     def put(self, request):
         user = request.user
-        serializer = UserGETSerializer(user, data=request.data, partial=True) 
+        serializer = UserSerializer(user, data=request.data, partial=True) 
         if serializer.is_valid():
-            serializer.save()
-            print('************', serializer)
-            return Response({"success": True, "response": {"message": "Profile updated successfully!", "data": serializer.data}}, status=status.HTTP_200_OK)
+            user = serializer.save()
+            serializer = DefaultUserSerializer(user)
+            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
         return Response({"success": False, "response": {"message": "Invalid data", "errors": serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SignInView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        email_or_mobile = request.data.get('email_or_mobile')
-        password = request.data.get('password')
+    def post(self, request, *args, **kwargs):
+        phone_number = request.data.get('phone_number')
+        recover_account = request.data.get('recover_account', None)
+        user_type = request.data.get('user_type', None)
 
-        if not email_or_mobile or not password:
-            return Response({"success": False, 'response': {"message": "Email or mobile number and password are required!"}}, status=status.HTTP_400_BAD_REQUEST)
+        if not user_type:
+            return Response({'success': False, 'response': {'message': "user_type field is missing"}},
+                        status=status.HTTP_400_BAD_REQUEST)
+                        
+        user = User.objects.filter(phone_number=phone_number).first()
+        
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except ObjectDoesNotExist:
+            hashed_password = make_password(phone_number)
+            user = User.objects.create(
+                username=phone_number,
+                password=hashed_password,
+                phone_number=phone_number,
+                user_type=user_type,
+            )
+        
+        user.user_type = user_type
+        user.save()
 
-        user = User.objects.filter(Q(email=email_or_mobile) | Q(mobile_number=email_or_mobile)).first()
-        if not user:
-            return Response({"success": False, 'response': {"message": "User does not exist!"}}, status=status.HTTP_404_NOT_FOUND)
+        # if recover_account:
+        #     user.is_deleted = False
+        #     user.save()
 
-        login_user = authenticate(username=user, password=password)
-        if login_user:
-            token, created = Token.objects.get_or_create(user=login_user)
-            serializer = UserSerializer(login_user)
-            return Response({"success": True, 'response': {"data": serializer.data, 'token': str(token.key)}}, status=status.HTTP_200_OK)
-        else:
-            return Response({"success": False, 'response': {"message": "Invalid credentials!"}}, status=status.HTTP_400_BAD_REQUEST)
+        # if user.is_deleted:
+        #     return Response({"success": False, 'response': {'message': 'Your account is deleted! are you want to recover your account?'}},
+        #             status=status.HTTP_403_FORBIDDEN)
+        
+        # if user.role == 'Business':
+        #     store = StoreInfo.objects.filter(user=user).first()
+        #     if store:
+        #         if store.status == 'pending':
+        #             return Response({'success': False, 'response': {'message': "Please wait while your business account is under review for approval. We appreciate your patience!"}},
+        #                         status=status.HTTP_400_BAD_REQUEST)                
+        #         elif store.status == 'rejected':
+        #                 return Response({'success': False, 'response': {'message': "Your business account has been rejected due to specific reasons. For further assistance, please reach out to our Help and Support team."}},
+        #                             status=status.HTTP_400_BAD_REQUEST)                
 
-class EmailVerifyView(APIView):
+        wallet, created = Wallet.objects.get_or_create(user=user)
+
+        # for handling 0 should not come on Front
+        first_digit = random.choice(string.digits[1:])
+
+        remaining_digits = ''.join(random.choices(string.digits, k=3))
+
+        random_digits_for_code = first_digit + remaining_digits
+
+        user_verification, created = UserVerification.objects.get_or_create(
+            user=user,
+            defaults={'code': random_digits_for_code}
+        )
+
+        user_verification.is_verified = False
+        user_verification.save()
+
+        if not created:
+            user_verification.code = random_digits_for_code
+            user_verification.save()
+
+        try:
+            sendSMS(phone_number, random_digits_for_code)
+        except Exception as e:
+            print('*******************', e)
+            pass
+
+        return Response({'success': True,
+                        'response': {'message': 'OTP sent to your mobile number, use OTP for login.'}},
+                        status=status.HTTP_200_OK)
+    
+class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
+        phone_number = request.data.get('phone_number')
         code = request.data.get('code')
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(phone_number=phone_number).first()
         otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
 
         if not otp_code:
@@ -144,8 +196,16 @@ class EmailVerifyView(APIView):
         otp_code.is_varified = True
         otp_code.save()
 
-        return Response({"success": True, 'response': {"message":'Email verified successfully'}}, status=status.HTTP_201_CREATED)
-
+        try:
+            token = Token.objects.get(user=user)
+        except Token.DoesNotExist:
+            token = Token.objects.create(user=user)
+        
+        access_token = token.key
+        
+        serializer = DefaultUserSerializer(user)
+        return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
+                        status=status.HTTP_200_OK)
 
 class MobileNumberVerifyAPIView(APIView):
     permission_classes = [AllowAny]
@@ -168,16 +228,16 @@ class MobileNumberVerifyAPIView(APIView):
         return Response({'success':True, 'response':{'message':'phone number verified successfully '}}, status=status.HTTP_200_OK)
 
 
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+class LogoutApiView(APIView):
 
     def post(self, request):
-        token = request.auth
-        if token:
-            return Response({"success": True, "response": {"message": "Successfully logged out"}}, status=status.HTTP_200_OK)
-        else:
-            return Response({"success": False, "response": {"message": "Error occurred while logging out"}}, status=status.HTTP_400_BAD_REQUEST)
+        # fcm_device = FCMDevice.objects.filter(user__username=request.user.username)
+        # if fcm_device.exists():
+        #     fcm_device.delete()
+        request.user.auth_token.delete()
 
+        return Response({'success': True, 'response': {'message': 'User Logged Out Successfully'}},
+                        status=status.HTTP_200_OK)
 
 
 class DriverProfileView(APIView):
@@ -307,52 +367,11 @@ class RatingView(APIView):
 
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
+
             serializer.save(user=user)
+
             return Response({"success": True, "response": {"message": "Review submitted successfully!", "data": serializer.data}}, status=status.HTTP_201_CREATED)
         return Response({"success": False, "response": {"message": "Invalid data", "errors": serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
-
-class SocialLoginAPIView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email').lower().strip() if 'email' in request.data else None
-        # user_d_id = request.data.get('device_id', None)
-        full_name = request.data.get('full_name', None)
-        social_platform = request.data.get('social_platform')
-
-        if not email or not social_platform:
-            return Response({"success": False, 'response': {'message': 'Email and social platform are required!'}},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        user = User.objects.filter(email=email).first()
-
-        if not user:
-            password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-            username = email.split('@')[0]
-
-        
-            if User.objects.filter(username=username).exists():
-                username = f"{username}_{random.randint(1000, 9999)}"
-
-            user = User(
-                email=email,
-                username=username,
-                password=make_password(password),
-                is_active=True,
-                full_name=full_name,
-            )
-            user.save()
-
-        try:
-            token = Token.objects.get(user=user)
-        except Token.DoesNotExist:
-            token = Token.objects.create(user=user)
-
-        access_token = token.key
-
-        return Response({"success": True, 'response': {'message': 'Login successful', 'access_token': access_token}}, status=status.HTTP_200_OK)
-
-
 
 class CreateDepositIntentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -403,3 +422,58 @@ class ConfirmDepositView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class SocialLoginApiView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email').lower().strip() if 'email' in request.data else None
+        user_d_id = request.data.get('device_id', None)
+        full_name = request.data.get('full_name', None)
+        social_platform = request.data.get('social_platform', None)
+        user_type = request.data.get('user_type', None)
+
+        if not email or not user_d_id or not social_platform or not user_type:
+            return Response({"success": False, 'response': {'message': 'email, device id, user_type and social_platform required!'}},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.filter(email=email).first()        
+        username = email.split('@')[0]
+        if not user:
+            hashed_password = make_password(username)
+            user = User.objects.create(
+                username=username,
+                password=hashed_password,
+                email=email,
+                full_name=full_name,
+                social_platform=social_platform,
+                user_type=user_type,
+            )
+
+        user.is_active = True
+        user.save()
+
+        try:
+            token = Token.objects.get(user=user)
+        except Token.DoesNotExist:
+            token = Token.objects.create(user=user)
+        
+        access_token = token.key
+        
+        wallet, created = Wallet.objects.get_or_create(user=user)
+        serializer = DefaultUserSerializer(user)
+        
+        # try:
+        #     fcm_device = FCMDevice.objects.get(device_id=user.id)
+        #     fcm_device.delete()
+        # except:
+        #     pass
+
+        # if user_d_id:
+        #     fcm_device, created = FCMDevice.objects.get_or_create(
+        #         registration_id=user_d_id,
+        #         defaults={'user': user, 'device_id': user_d_id}
+        #     )
+
+        return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
+                        status=status.HTTP_200_OK)

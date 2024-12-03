@@ -4,23 +4,23 @@ from user_management_app.constants import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class MyAccountManager(BaseUserManager):
-    def create_user(self, email, username, password=None):
-        if not email:
-            raise ValueError('Users must have a email.')
+    def create_user(self, phone_number, username, password=None):
+        if not phone_number:
+            raise ValueError('Users must have a phone_number.')
         if not username:
             raise ValueError('Users must have a username')
 
         user = self.model(
-            email=email,
+            phone_number=phone_number,
             username=username,
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, username, password):
+    def create_superuser(self, phone_number, username, password):
         user = self.create_user(
-            email=email,
+            phone_number=phone_number,
             password=password,
             username=username,
         )
@@ -40,20 +40,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     
-    email = models.EmailField(verbose_name="email", max_length=60, unique=True)
+    full_name = models.CharField(max_length=255, null=True, blank=True)
+    phone_number = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    email = models.EmailField(verbose_name="email", max_length=60, unique=True, null=True, blank=True)
     user_type = models.CharField(max_length=255,  choices=USER_TYPE_CHOICES)
     logo = models.ImageField(upload_to='media/logo', null=True, blank=True)
-    first_name = models.CharField(max_length=255, null=True, blank=True)
-    last_name = models.CharField(max_length=255, null=True, blank=True)
-    date_of_birth = models.DateField(null=True, blank=True)
-    license_no = models.CharField(max_length=255, null=True, blank=True)
-    full_name = models.CharField(max_length=255)
-    mobile_number = models.CharField(max_length=255)
-    mobile_number_varified = models.BooleanField(default=False)
+    dob = models.DateField(null=True, blank=True)
+    license_number = models.CharField(max_length=255, null=True, blank=True)
+    province = models.ForeignKey('utils_app.Province', on_delete=models.SET_NULL, null=True, blank=True)
+    city = models.ForeignKey('utils_app.City', on_delete=models.SET_NULL, null=True, blank=True)
     social_platform = models.CharField(max_length=255, choices=SOCIAL_PLATFORM_CHOICES, null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
     
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['phone_number']
 
     objects = MyAccountManager()
 
@@ -69,7 +69,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return True
 
     def __str__(self):
-        return self.email
+        return self.username
 
 class UserVerification(BaseModelWithCreatedInfo):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -112,12 +112,12 @@ class Wallet(BaseModelWithCreatedInfo):
         return f"{self.user.username} wallet"
 
 
-class TransactionHistroy(BaseModelWithCreatedInfo): 
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE) 
-    amount = models.DecimalField(max_digits=10, decimal_places=2) 
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_CHOICES) 
+class TransactionHistroy(BaseModelWithCreatedInfo):
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_CHOICES)
 
-    def __str__(self): 
+    def __str__(self):
         return f"{self.transaction_type} of {self.amount} to {self.wallet.user.username} Wallet"
     
 

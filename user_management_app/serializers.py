@@ -1,17 +1,36 @@
 from rest_framework import serializers
+from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'user_type', 'mobile_number']
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number', 'city', 'province']
 
 class UserGETSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'user_type', 'first_name', 'last_name', 'date_of_birth', 'license_no', 'full_name', 'mobile_number']
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number']
 
+class DefaultUserSerializer(serializers.ModelSerializer):
+    city = serializers.SerializerMethodField()
+    province = serializers.SerializerMethodField()
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number', 'province', 'city']
 
+    def get_city(self, instance):
+        if instance.city:
+            return CitySerializer(instance.city).data
+        else:
+            return None
+        
+    def get_province(self, instance):
+        if instance.province:
+            return ProvinceSerializer(instance.province).data
+        else:
+            return None
+        
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile

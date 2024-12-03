@@ -25,11 +25,10 @@ def sendSMS(number, otp):
     )
 
 
-
-USER_TYPE_CHOICES = (
-        ('as a learner', 'as a learner'),
-        ('as a instructor', 'as a instructor'),
-    )
+USER_TYPE_CHOICES = [
+    ('learner', 'Learner'),
+    ('instructor', 'Instructor'),
+]
 
 RATING_CHOICES = [
         (1, '1 - Disappointed'),

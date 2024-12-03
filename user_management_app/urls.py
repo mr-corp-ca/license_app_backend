@@ -1,20 +1,18 @@
 from django.urls import path
-from . import views
-from .views import CreateDepositIntentView, ConfirmDepositView
+from user_management_app.views import *
 
 urlpatterns = [
-    path('signup', views.SignUpView.as_view()),
-    path('signin', views.SignInView.as_view()),
-    path('EmailVerifyView', views.EmailVerifyView.as_view()),
-    path('LogoutView', views.LogoutView.as_view()),
-    path('updateprofile', views.UserProfileUpdateView.as_view()),
-    path('DriverProfileView', views.DriverProfileView.as_view()),
-    path('ResendOTPView', views.ResendOTPView.as_view()),
-    path('ForgotPasswordView', views.ForgotPasswordView.as_view()),
-    path('MobileNumberVerify', views.MobileNumberVerifyAPIView.as_view()),
-    path('RatingView', views.RatingView.as_view()),
-    path('SocialLogin', views.SocialLoginAPIView.as_view()),
-    path('create-deposit/', CreateDepositIntentView.as_view()),
-    path('confirm-deposit/', ConfirmDepositView.as_view()),
+    path('signin/', SignInView.as_view()),
+    path('verify_otp/', VerifyOTPView.as_view()),
+    path('Logout', LogoutApiView.as_view()),
+    path('get_profile', UserApiView.as_view()),
+    path('EditProfile/', UserApiView.as_view()),
+    path('SocialLogin/', SocialLoginApiView.as_view()),
 
+    path('signup/', UserApiView.as_view()),
+    path('DriverProfileView', DriverProfileView.as_view()),
+    path('ResendOTPView', ResendOTPView.as_view()),
+    path('ForgotPasswordView', ForgotPasswordView.as_view()),
+    path('MobileNumberVerify', MobileNumberVerifyAPIView.as_view()),
+    path('RatingView', RatingView.as_view()),
 ]

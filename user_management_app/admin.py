@@ -11,7 +11,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(UserVerification)
 class UserVerificationAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'code']
+    list_display = ['id', 'user', 'code', 'is_varified']
     search_fields = ('user__username', 'user__full_name', 'user__email',  'user__first_name', 'user__last_name')
 
     ordering = ('-created_at',)

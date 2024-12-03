@@ -6,17 +6,24 @@ from utils_app.models import BaseModelWithCreatedInfo
 # Create your models here.
 
 
+
+class LicenseCategory(BaseModelWithCreatedInfo):
+    name = models.CharField(max_length=255)
+
+class Service(BaseModelWithCreatedInfo):
+    name = models.CharField(max_length=255)
+
 class Course(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    license_category = models.ManyToManyField(LicenseCategory, related_name='course_license_category', blank=True)
+    services = models.ManyToManyField(Service, related_name='course_services', blank=True)
 
-    title = models.CharField(max_length=255, help_text="Title of the course")
-    description = models.TextField(help_text="Detailed description of the course")
-    price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price of the course in USD")
-    license_category = models.CharField(max_length=100, help_text="Category of the license, e.g., Professional, Educational")
-    services = models.TextField(help_text="List of services included in the course", blank=True, null=True)
-    lesson_numbers = models.PositiveIntegerField(help_text="Number of lessons in the course")
-    refund_policy = models.TextField(help_text="Details of the refund policy", blank=True, null=True)
-    course_cover_image = models.ImageField(upload_to='course_images/', help_text="Cover image for the course", blank=True, null=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    price = models.FloatField(default=0.0)
+    lesson_numbers = models.PositiveIntegerField()
+    refund_policy = models.TextField(blank=True, null=True)
+    course_cover_image = models.ImageField(upload_to='course_images/')
 
     def __str__(self):
         return self.title
