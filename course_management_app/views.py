@@ -15,10 +15,11 @@ class CourseApiView(APIView):
 
     def post(self, request):
         user = request.user
-        services_list = request.POST.get('services')
-        license_category_list = request.POST.get('license_category')
-        lesson_numbers = request.POST.get('lesson_numbers')
-        lessons = request.POST.get('lessons')
+        request_data = request.data
+        services_list = request_data.get('services')
+        license_category_list = request_data.get('license_category')
+        lesson_numbers = request_data.get('lesson_numbers')
+        lessons = request_data.get('lessons')
 
         if type(services_list) == str:
             services_list = json.loads(services_list) 
@@ -27,7 +28,7 @@ class CourseApiView(APIView):
             license_category_list = json.loads(license_category_list) 
 
         if type(lessons) == str:
-            lessons = json.loads(lessons) 
+            lessons = json.loads(lessons)
 
         try:
             request.data._mutable = True
