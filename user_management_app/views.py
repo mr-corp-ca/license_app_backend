@@ -151,7 +151,7 @@ class SignInView(APIView):
         wallet, created = Wallet.objects.get_or_create(user=user)
 
         # for handling 0 should not come on Front
-        first_digit = random.choice(string.digits[1:])
+        first_digit = random.choice(string.digits[1:]) 
 
         remaining_digits = ''.join(random.choices(string.digits, k=3))
 

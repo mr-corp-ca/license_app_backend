@@ -16,23 +16,9 @@ DEBUG = True
 ALLOWED_HOSTS = [
                 'localhost',
                 '127.0.0.1',
-                '192.168.10.16',
+                '192.168.10.40',
 
                  ]
-
-
-
-CORS_ORIGIN_WHITELIST = [
-    'http://localhost:3000',
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.10.16:9000/'
-
-]
-
-CSRF_COOKIE_SECURE = True
-CORS_ORIGIN_ALLOW_ALL = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -51,10 +37,24 @@ INSTALLED_APPS = [
 
 ]
 
+
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://192.168.10.40:9000/'
+
+]
+
+CSRF_COOKIE_SECURE = True
+CORS_ORIGIN_ALLOW_ALL = True
+
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

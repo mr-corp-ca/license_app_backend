@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from .models import *
 
+class DiscountOfferUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id',  'user_type', 'full_name','logo']
 
 class LicenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,3 +37,31 @@ class GETCourseSerializer(serializers.ModelSerializer):
     def get_services(self, instance):
         service_objects = instance.services.all()
         return ServiceSerializer(service_objects, many=True).data
+
+class PackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Package
+        fields = ['id', 'user', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup']
+
+class GETPackageSerializer(serializers.ModelSerializer):
+    services = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'user', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services']
+    
+    def get_services(self, instance):
+        return ServiceSerializer(instance.services.all(), many=True).data
+    
+class DiscountOfferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiscountOffer
+        fields = ['offer_type', 'name', 'audience', 'user', 'course', 'discount', 'start_date', 'end_date']
+
+class GETDiscountOfferSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    class Meta:
+        model = DiscountOffer
+        fields = ['offer_type', 'name', 'audience', 'user', 'course', 'discount', 'start_date', 'end_date']
+
+    def get_user(self, instance):
+        return DiscountOfferUserSerializer(instance.user).data

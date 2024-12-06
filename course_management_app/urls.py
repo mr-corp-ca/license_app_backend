@@ -10,4 +10,13 @@ urlpatterns = [
     path('ServicesList', ServicesApiView.as_view()),
     path('LicenseCategoryList', LicenseCategoryApiView.as_view()),
 
+    path('CreatePackage/', PackageApiView.as_view()),
+    path('MyPackage', PackageApiView.as_view()),
+    path('DeletePackage/<int:id>', PackageApiView.as_view()),
+
+    path('CreateDiscountOffer/', DiscountOfferApiView.as_view()),
+    path('MyDiscountOffer', DiscountOfferApiView.as_view()),
+    path('EditDiscountOffer/<int:id>', DiscountOfferApiView.as_view()),
+    path('DeleteDiscountOffer/<int:id>', DiscountOfferApiView.as_view()),
+
 ]

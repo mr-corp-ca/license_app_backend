@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAuthenticated
 import json
 # Create your views here.
 
-
 class CourseApiView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -130,3 +129,109 @@ class LicenseCategoryApiView(APIView):
         objs = LicenseCategory.objects.all()
         serializer = LicenseCategorySerializer(objs, many=True)
         return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+    
+
+class PackageApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        services_list = request.data.get('services')
+        try:
+            if type(services_list) == str:
+                services_list = json.loads(services_list) 
+        except:
+            pass
+
+        try:
+            request.data._mutable = True
+        except:
+            pass
+
+        request.data['user'] = user.id
+        serializer = PackageSerializer(data=request.data)
+        if serializer.is_valid():
+            pakage = serializer.save()
+            if services_list:
+                for service in services_list:
+                    pakage.services.add(service)
+            serializer = GETPackageSerializer(pakage)
+            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
+        else:
+            first_field, errors = next(iter(serializer.errors.items()))
+            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+            first_error_message = f"{formatted_field} is required!"
+            return Response(
+                {'success': False, 'response': {'message': first_error_message}},
+                status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        user = request.user
+        packages = Package.objects.filter(user=user).order_by('-created_at')
+        serializer = GETPackageSerializer(packages, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+    
+    def delete(self, request, id):
+        user = request.user
+        package = Package.objects.filter(id=id).first()
+        if not package:
+            return Response({"success": False, "response": {"message": 'Package not found!'}}, status=status.HTTP_404_NOT_FOUND)
+        package.delete()
+        return Response({"success": True, "response": {"message": 'Package delete successfully!'}}, status=status.HTTP_200_OK)
+
+class DiscountOfferApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        try:
+            request.data._mutable = True
+        except:
+            pass
+
+        request.data['user'] = user.id
+        serializer = DiscountOfferSerializer(data=request.data)
+        if serializer.is_valid():
+            pakage = serializer.save()
+            serializer = GETDiscountOfferSerializer(pakage)
+            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
+        else:
+            first_field, errors = next(iter(serializer.errors.items()))
+            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+            first_error_message = f"{formatted_field} is required!"
+            return Response(
+                {'success': False, 'response': {'message': first_error_message}},
+                status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        user = request.user
+        discounts = DiscountOffer.objects.filter(user=user).order_by('-created_at')
+        serializer = GETDiscountOfferSerializer(discounts, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+    
+    def delete(self, request, id):
+        user = request.user
+        discount = DiscountOffer.objects.filter(id=id).first()
+        if not discount:
+            return Response({"success": False, "response": {"message": 'Discount not found!'}}, status=status.HTTP_404_NOT_FOUND)
+        discount.delete()
+        return Response({"success": True, "response": {"message": 'Discount delete successfully!'}}, status=status.HTTP_200_OK)
+
+    def patch(self, request, id):
+        user = request.user
+        discount = DiscountOffer.objects.filter(id=id).first()
+        if not discount:
+            return Response({"success": False, "response": {"message": 'Discount offer object not found!'}}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = DiscountOfferSerializer(discount, data=request.data, partial=True)
+        if serializer.is_valid():
+            discount = serializer.save()
+            serializer = GETDiscountOfferSerializer(discount)
+            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
+        else:
+            first_field, errors = next(iter(serializer.errors.items()))
+            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+            first_error_message = f"{formatted_field} is required!"
+            return Response(
+                {'success': False, 'response': {'message': first_error_message}},
+                status=status.HTTP_400_BAD_REQUEST)

@@ -139,7 +139,6 @@ class AdminIncomeGraphAPIView(APIView):
         return Response({'success': True, 'response': {'data': data}},
                         status=status.HTTP_200_OK)
 
-
 class AdminUserListView(ListAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
