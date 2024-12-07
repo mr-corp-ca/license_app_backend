@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  python-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8400:8400"  # Expose port 8400 on the host to port 8400 in the container
+    env_file:
+      - ./driving_license/.env  # Load environment variables from the .env file inside the 'driving_license' directory
+    restart: always  # Ensure the container restarts automatically if it crashes
