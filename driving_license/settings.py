@@ -17,6 +17,7 @@ ALLOWED_HOSTS = [
                 'localhost',
                 '127.0.0.1',
                 '192.168.10.40',
+                'api.thegearup.ca'
 
                  ]
 
@@ -44,7 +45,8 @@ CORS_ORIGIN_WHITELIST = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.10.40:9000/'
+    'http://192.168.10.40:9000/',
+    'http://api.thegearup.ca/'
 
 ]
 
