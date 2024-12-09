@@ -26,6 +26,7 @@ def sendSMS(number, otp):
 
 
 USER_TYPE_CHOICES = [
+    ('admin', 'Owner Admin'),
     ('learner', 'Learner'),
     ('instructor', 'Instructor'),
 ]

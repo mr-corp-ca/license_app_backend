@@ -7,7 +7,7 @@ from user_management_app.models import User
 class DefaultAdminUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'phone_number', 'email', 'user_type', 'logo', 'dob']
+        fields = ['id', 'full_name', 'phone_number', 'email', 'user_type', 'logo', 'dob', 'username']
 
 
 class AdminNewUserSerializer(serializers.ModelSerializer):
