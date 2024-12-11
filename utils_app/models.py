@@ -1,6 +1,5 @@
 from django.db import models
 from utils_app.requestMW import get_request
-
 from django.conf import settings
 from django_extensions.db.fields import CreationDateTimeField, ModificationDateTimeField
 # Create your models here.
@@ -54,3 +53,24 @@ class AppLanguage(BaseModelWithCreatedInfo):
 class GeneralModel(BaseModelWithCreatedInfo):
     # field_type = models.CharField(max_length=255, choices=)
     text = models.TextField(null=True, blank=True)
+
+
+class Radius(BaseModelWithCreatedInfo):
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE)
+    main_location_name = models.CharField(max_length=255,null=True, blank=True,verbose_name='Main Radius')
+    main_latitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)  
+    main_longitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
+
+    def __str__(self):
+        return f"Radius for Instructor {self.user.id}"
+
+
+class Location(BaseModelWithCreatedInfo):
+    radius = models.ForeignKey(Radius, related_name='locations', on_delete=models.CASCADE)
+    location_name = models.CharField(max_length=255)  
+    latitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True) 
+    longitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
+
+    def __str__(self):
+        return f"Instructor other Locations - {self.location_name}"
+    

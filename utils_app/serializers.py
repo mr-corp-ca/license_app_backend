@@ -10,3 +10,24 @@ class ProvinceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Province
         fields = ['id', 'name']
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id', 'location_name', 'latitude', 'longitude']
+
+
+class RadiusSerializer(serializers.ModelSerializer):
+    locations = LocationSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Radius
+        fields = ['id', 'main_location_name', 'main_latitude', 'main_longitude', 'locations']
+
+
+class CreateRadiusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Radius
+        fields = ['user', 'main_location_name', 'main_latitude', 'main_longitude']

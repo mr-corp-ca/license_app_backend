@@ -34,6 +34,10 @@ class Lesson(BaseModelWithCreatedInfo):
     image = models.ImageField(upload_to='Lession/images')
 
 class Vehicle(BaseModelWithCreatedInfo):
+    VEHICLE_STATUS_CHOICES = [
+        ('free', 'Free'),
+        ('booked', 'Booked'),
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255, verbose_name="Vehicle Name")
@@ -42,6 +46,8 @@ class Vehicle(BaseModelWithCreatedInfo):
     license_number = models.CharField(max_length=100, unique=True, verbose_name="License Number")
     vehicle_model = models.CharField(max_length=100, verbose_name="Vehicle Model")
     image = models.ImageField(upload_to='vehicle_images/', blank=True, null=True, verbose_name="Vehicle Image")
+    booking_status = models.CharField(max_length=10,choices=VEHICLE_STATUS_CHOICES,default='free',verbose_name="Vehcile Status")
+
 
     def __str__(self):
         return f"{self.name} ({self.vehicle_registration_no})"

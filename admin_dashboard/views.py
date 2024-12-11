@@ -1,4 +1,5 @@
 import threading
+import calendar
 
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
 from course_management_app.models import Course
@@ -6,6 +7,7 @@ from user_management_app.models import TransactionHistroy, User
 from .models import *
 from .serializers import *
 from itertools import chain
+
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
@@ -20,23 +22,66 @@ from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.db.models import Sum
+from django.db.models import Sum,Count,Case, When, Value, IntegerField
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.utils.timezone import now
 
 
-def get_monthly_income(month=None):
-    transactions = TransactionHistroy.objects.filter(
-        created_at__year=datetime.now().year  # Filter for the current year
-    ).annotate(month=TruncMonth('created_at'))  # Truncate date to month
-    
-    if month:
-        transactions = transactions.filter(created_at__month=month)  # Filter by month if provided
-    
-    monthly_income = transactions.values('month').annotate(total_income=Sum('amount'))
-    return monthly_income
+def get_monthly_income(data_type, month=None):
+    try:
 
+        if data_type == 'total_income':
+            transactions = TransactionHistroy.objects.filter(
+                created_at__year=datetime.now().year  # Filter for the current year
+            ).annotate(month=TruncMonth('created_at'))  # Truncate date to month
+            
+            if month:
+                transactions = transactions.filter(created_at__month=month)  # Filter by month if provided
+            
+            monthly_income = transactions.values('month').annotate(total_income=Sum('amount'))
+            
+            return monthly_income
+        
+        elif data_type == 'total_users':
+            users = User.objects.filter(
+                date_joined__year=datetime.now().year,
+                user_type__in=['learner', 'instructor']
+            ).annotate(month=TruncMonth('date_joined'))  # Truncate date to month
+
+            if month:
+                users = users.filter(date_joined__month=month)  # Filter by month if provided
+            monthly_users = users.values('month').annotate(
+                total_users=Count('id'),
+                total_learners=Count('id', filter=Q(user_type='learner')),
+                total_instructors=Count('id', filter=Q(user_type='instructor'))
+            )
+            return monthly_users
+        
+        elif data_type == 'total_schools':
+            schools = User.objects.filter(
+                created_at__year = datetime.now().year,
+                user_type = 'instructor'
+            ).annotate(month= TruncMonth('created_at'))
+            if month:
+                schools = schools.filter(created_at__month = month)
+            monthly_schools = schools.values('month').annotate(total_schools = Count('id'))
+            return monthly_schools
+        
+        elif data_type == 'total_courses':
+            courses = Course.objects.all().annotate(month=TruncMonth('created_at'))  
+
+            if month:
+                courses = courses.filter(created_at__month=month) 
+            courses_data = courses.values('month').annotate(total_courses=Count('id'))
+            
+            return courses_data
+        else:
+            return Response({'success': False, 'message': 'Invalid data type provided'},
+            status=status.HTTP_404_NOT_FOUND)
+        
+    except Exception as e:
+        return Response({'status':False, 'message' : f"An unexpected error occurred : {str(e)}"},status=status.HTTP_400_BAD_REQUEST)
 
 
 class AdminLoginApiView(APIView):
@@ -118,6 +163,11 @@ class AdminDashboardApiView(APIView):
 class AdminIncomeGraphAPIView(APIView):
     def get(self, request):
         month = request.GET.get('month', None)
+        data_type = request.GET.get('data_type', None)
+
+        if not data_type:
+            return Response({'success': False, 'message': 'Invalid data type'},
+                status=status.HTTP_400_BAD_REQUEST)
         
         if month:
             try:
@@ -129,16 +179,39 @@ class AdminIncomeGraphAPIView(APIView):
                 return Response({'success': False, 'message': 'Month must be an integer'},
                                 status=status.HTTP_400_BAD_REQUEST)
         
-        monthly_income = get_monthly_income(month)
-        
-        data = [
-            {"month": income['month'].strftime('%B'), "total_income": income['total_income']}
-            for income in monthly_income
-        ]
-        
+        monthly_data = get_monthly_income(data_type, month)
+        if data_type == 'total_income':
+            data = [
+                {"month": month_data['month'].strftime('%B'), "total_income": month_data['total_income']}
+                for month_data in monthly_data
+            ]
+        elif data_type == 'total_users':
+            data = [
+                {"month": month_data['month'].strftime('%B'), "total_users": month_data['total_users'],
+                "total_learners": month_data['total_learners'],
+                "total_instructors": month_data['total_instructors'],}
+                for month_data in monthly_data
+            ]
+        elif data_type == 'total_schools':
+            data =  [
+                {"month":month_data['month'].strftime('%B'), "total_schools": month_data['total_schools']}
+               for month_data in monthly_data 
+            ]
+
+        elif data_type == 'total_courses':
+            data = [
+                {"month": month_data['month'].strftime('%B'),"total_courses":month_data['total_courses']}
+                for month_data in monthly_data
+            ]
+
+        else:
+            return Response({'success': False, 'message': 'Invalid data type provided'},
+            status=status.HTTP_404_NOT_FOUND)
+
         return Response({'success': True, 'response': {'data': data}},
                         status=status.HTTP_200_OK)
-
+    
+            
 class AdminUserListView(ListAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
