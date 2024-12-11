@@ -57,6 +57,16 @@ def get_monthly_income(data_type, month=None):
                 total_instructors=Count('id', filter=Q(user_type='instructor'))
             )
             return monthly_users
+        elif data_type == 'total_schools':
+            users = User.objects.filter(
+                date_joined__year=datetime.now().year,
+                user_type = 'instructor'
+            ).annotate(month=TruncMonth('date_joined'))
+            if month:
+                users =  users.filter(date_joined__month=month)
+            monthly_schools = users.values('month').annotate(Count('id'))
+            return monthly_schools
+
         elif data_type == 'total_courses':
             courses = Course.objects.all().annotate(month=TruncMonth('created_at'))  
 
@@ -176,9 +186,15 @@ class AdminIncomeGraphAPIView(APIView):
             ]
         elif data_type == 'total_users':
             data = [
-                {"month": month_data['month'].strftime('%B'), "total_users": month_data['total_users'],
+                {"month": month_data['month'].strftime('%B'), 
+                 "total_users": month_data['total_users'],
                 "total_learners": month_data['total_learners'],
                 "total_instructors": month_data['total_instructors'],}
+                for month_data in monthly_data
+            ]
+        elif data_type == 'total_schools':
+            data = [
+                {"month": month_data['month'].strftime('%B'),"total_instructors": month_data.get('id__count', 0) }
                 for month_data in monthly_data
             ]
         elif data_type == 'total_courses':
