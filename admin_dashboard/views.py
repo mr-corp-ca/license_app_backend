@@ -57,17 +57,6 @@ def get_monthly_income(data_type, month=None):
                 total_instructors=Count('id', filter=Q(user_type='instructor'))
             )
             return monthly_users
-        
-        elif data_type == 'total_schools':
-            schools = User.objects.filter(
-                created_at__year = datetime.now().year,
-                user_type = 'instructor'
-            ).annotate(month= TruncMonth('created_at'))
-            if month:
-                schools = schools.filter(created_at__month = month)
-            monthly_schools = schools.values('month').annotate(total_schools = Count('id'))
-            return monthly_schools
-        
         elif data_type == 'total_courses':
             courses = Course.objects.all().annotate(month=TruncMonth('created_at'))  
 
@@ -192,12 +181,6 @@ class AdminIncomeGraphAPIView(APIView):
                 "total_instructors": month_data['total_instructors'],}
                 for month_data in monthly_data
             ]
-        elif data_type == 'total_schools':
-            data =  [
-                {"month":month_data['month'].strftime('%B'), "total_schools": month_data['total_schools']}
-               for month_data in monthly_data 
-            ]
-
         elif data_type == 'total_courses':
             data = [
                 {"month": month_data['month'].strftime('%B'),"total_courses":month_data['total_courses']}
