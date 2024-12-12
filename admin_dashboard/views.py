@@ -2,11 +2,13 @@ import threading
 import calendar
 
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
-from course_management_app.models import Course
+from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer
+from course_management_app.models import Course,UserCourseProfile
 from user_management_app.models import TransactionHistroy, User
 from .models import *
 from .serializers import *
 from itertools import chain
+from course_management_app.serializers import *
 
 from django.db.models import Q
 from rest_framework import status
@@ -221,3 +223,40 @@ class AdminUserListView(ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['full_name']
     filterset_fields = ['user_type', 'is_active', 'is_deleted', 'email', 'phone_number', 'province__name', 'city__name']
+
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        
+        user = User.objects.get(id=id, is_deleted=False)
+        print("User",user)
+        if not user:
+            return Response({'status':False,'message':'User not found.'},status=status.HTTP_404_NOT_FOUND)
+        user_profile_courses, created = UserCourseProfile.objects.get_or_create(
+            user=user,
+        )
+        
+        
+        courses = user_profile_courses.courses.all()
+        packages = Package.objects.filter(user=user)
+        vehicles = Vehicle.objects.filter(user=user)
+
+        # Serialize data
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "dob": user.dob,
+            "user_type": user.user_type,
+            "logo": user.logo.url if user.logo else None,
+            "courses": AdminGETCourseSerializer(courses, many=True).data,
+            "packages": GETPackageSerializer(packages, many=True).data,
+            "vehicles": VehicleSerializer(vehicles, many=True).data,
+        }
+
+        return Response(user_data)
+    

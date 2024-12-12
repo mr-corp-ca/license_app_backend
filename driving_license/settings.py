@@ -16,7 +16,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
                 'localhost',
                 '127.0.0.1',
-                '192.168.10.40',
+                '192.168.10.18',
                 'api.thegearup.ca'
 
                  ]
@@ -136,7 +136,7 @@ REST_FRAMEWORK = {
     'DEFAULT_MAX_PAGE_SIZE': 104857600,
   }
 
-
+DEFAULT_FILE_STORAGE = 'driving_license.custom_storage.CustomFileSystemStorage'
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 

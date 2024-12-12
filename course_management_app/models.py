@@ -72,3 +72,10 @@ class DiscountOffer(BaseModelWithCreatedInfo):
     discount = models.PositiveIntegerField(default=0, verbose_name="Discount & offers(%)")
     start_date = models.DateField(verbose_name="Start Date")
     end_date = models.DateField(verbose_name="End Date")
+
+class UserCourseProfile(BaseModelWithCreatedInfo):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='course_profile')
+    courses = models.ManyToManyField(Course, related_name='user_profiles')
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"

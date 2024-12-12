@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory,UserCourseProfile
 
 # Register your models here.
 
@@ -46,3 +46,6 @@ class LicenseCategoryAdmin(admin.ModelAdmin):
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'created_at')
+
+
+admin.site.register(UserCourseProfile)
