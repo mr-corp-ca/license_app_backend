@@ -44,6 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=255, unique=True, null=True, blank=True)
     email = models.EmailField(verbose_name="email", max_length=60, unique=True, null=True, blank=True)
     user_type = models.CharField(max_length=255,  choices=USER_TYPE_CHOICES)
+    address = models.CharField(max_length=255,null=True,blank=True)
     logo = models.ImageField(upload_to='media/logo', null=True, blank=True)
     dob = models.DateField(null=True, blank=True)
     license_number = models.CharField(max_length=255, null=True, blank=True)

@@ -3,7 +3,7 @@ import calendar
 
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
 from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer
-from course_management_app.models import Course,UserCourseProfile
+from course_management_app.models import Course, UserSelectedCourses
 from user_management_app.models import TransactionHistroy, User
 from .models import *
 from .serializers import *
@@ -222,7 +222,7 @@ class AdminUserListView(ListAPIView):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['full_name']
-    filterset_fields = ['user_type', 'is_active', 'is_deleted', 'email', 'phone_number', 'province__name', 'city__name']
+    filterset_fields = ['user_type', 'is_active', 'is_deleted', 'email', 'phone_number', 'province', 'city']
 
 
 class UserProfileView(APIView):
@@ -230,33 +230,59 @@ class UserProfileView(APIView):
 
     def get(self, request, id):
         
-        user = User.objects.get(id=id, is_deleted=False)
-        print("User",user)
+        user = User.objects.filter(id=id).first()
         if not user:
             return Response({'status':False,'message':'User not found.'},status=status.HTTP_404_NOT_FOUND)
-        user_profile_courses, created = UserCourseProfile.objects.get_or_create(
+        user_profile_courses, created = UserSelectedCourses.objects.get_or_create(
             user=user,
         )
         
+        if user.user_type == 'learner':
+            courses = user_profile_courses.courses.all()
+            packages = Package.objects.filter(user=user)
+            vehicles = Vehicle.objects.filter(user=user)
+
+            # Serialize data
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "email": user.email,
+                "address" : user.address,
+                "phone_number": user.phone_number,
+                "dob": user.dob,
+                "user_type": user.user_type,
+                "logo": user.logo.url if user.logo else None,
+                "course": AdminGETCourseSerializer(courses, many=True).data,
+                "packages": GETPackageSerializer(packages, many=True).data,
+                "vehicles": VehicleSerializer(vehicles, many=True).data,
+            }
+
+            return Response(user_data)
+        elif user.user_type == 'instructor':
+            ids = Course.objects.filter(user=user).values_list('id',flat=True)
+            total_learner = UserSelectedCourses.objects.filter(id__in=ids).count()
+            packages = Package.objects.filter(user=user)
+            total_lesson = Lesson.objects.filter(course__user=user).count()
+            vehicles = Vehicle.objects.filter(user=user)
+            total_vehicle = vehicles.count()
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "address" :  user.address,
+                "email": user.email,
+                "phone_number": user.phone_number,
+                "dob": user.dob,
+                "user_type": user.user_type,
+                "logo": user.logo.url if user.logo else None,
+                "total_learner": total_learner,
+                "total_lesson": total_lesson,
+                "packages": GETPackageSerializer(packages, many=True).data,
+                "total_vehicle" : total_vehicle,
+                "vehicles": VehicleSerializer(vehicles, many=True).data,
+            }
+            return Response(user_data)
+        else:
+            return Response({'status':False,'message':'User type not found.'},status=status.HTTP_400_BAD_REQUEST)
         
-        courses = user_profile_courses.courses.all()
-        packages = Package.objects.filter(user=user)
-        vehicles = Vehicle.objects.filter(user=user)
-
-        # Serialize data
-        user_data = {
-            "id": user.id,
-            "username": user.username,
-            "full_name": user.full_name,
-            "email": user.email,
-            "phone_number": user.phone_number,
-            "dob": user.dob,
-            "user_type": user.user_type,
-            "logo": user.logo.url if user.logo else None,
-            "courses": AdminGETCourseSerializer(courses, many=True).data,
-            "packages": GETPackageSerializer(packages, many=True).data,
-            "vehicles": VehicleSerializer(vehicles, many=True).data,
-        }
-
-        return Response(user_data)
-    

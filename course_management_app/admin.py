@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory,UserCourseProfile
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory,UserSelectedCourses
 
 # Register your models here.
 
@@ -48,4 +48,4 @@ class ServiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'created_at')
 
 
-admin.site.register(UserCourseProfile)
+admin.site.register(UserSelectedCourses)

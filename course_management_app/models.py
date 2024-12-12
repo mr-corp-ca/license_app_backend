@@ -73,7 +73,7 @@ class DiscountOffer(BaseModelWithCreatedInfo):
     start_date = models.DateField(verbose_name="Start Date")
     end_date = models.DateField(verbose_name="End Date")
 
-class UserCourseProfile(BaseModelWithCreatedInfo):
+class UserSelectedCourses(BaseModelWithCreatedInfo):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='course_profile')
     courses = models.ManyToManyField(Course, related_name='user_profiles')
 
