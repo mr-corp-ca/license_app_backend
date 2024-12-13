@@ -265,6 +265,7 @@ class UserProfileView(APIView):
             packages = Package.objects.filter(user=user)
             total_lesson = Lesson.objects.filter(course__user=user).count()
             vehicles = Vehicle.objects.filter(user=user)
+            course = Course.objects.filter(user=user)
             total_vehicle = vehicles.count()
             user_data = {
                 "id": user.id,
@@ -278,6 +279,7 @@ class UserProfileView(APIView):
                 "logo": user.logo.url if user.logo else None,
                 "total_learner": total_learner,
                 "total_lesson": total_lesson,
+                "course" : GETCourseSerializer(course, many=True).data,
                 "packages": GETPackageSerializer(packages, many=True).data,
                 "total_vehicle" : total_vehicle,
                 "vehicles": VehicleSerializer(vehicles, many=True).data,
@@ -286,3 +288,54 @@ class UserProfileView(APIView):
         else:
             return Response({'status':False,'message':'User type not found.'},status=status.HTTP_400_BAD_REQUEST)
         
+ 
+class UserInactiveApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, id):
+        try:
+            user = User.objects.filter(id=id).first()
+
+            if not user:
+                return Response({'status': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.is_active:
+                user.is_active = False
+                user.save()
+
+                Token.objects.filter(user=user).delete()
+
+                return Response({'status': True, 'message': 'User inactive successfully. Token deleted.'},status=status.HTTP_200_OK)
+            else:
+                user.is_active = True
+                user.save()
+
+                # token, created = Token.objects.get_or_create(user=user)
+                return Response({'status': True,'message': 'User active successfully.'},status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'status': False, 'message': 'An error occurred.', 'error': str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminDeleteUserApiView(APIView):
+    def delete(self, request, id):
+        try:
+            user = User.objects.filter(id=id).first()
+
+            if not user:
+                return Response({'status': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            if user.is_deleted:
+                return Response({'status': False, 'message': 'User is already deleted.','is_deleted': user.is_deleted}, status=status.HTTP_404_NOT_FOUND)
+
+            user.is_deleted = True
+            user.is_active = False  
+            user.save()
+
+            Token.objects.filter(user=user).delete()
+
+            return Response({'status': True, 'message': 'User account deleted successfully.','is_deleted': user.is_deleted}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'status': False, 'message': 'An error occurred.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

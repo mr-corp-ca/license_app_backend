@@ -29,7 +29,7 @@ class AdminUserGetSerializer(serializers.ModelSerializer):
     course = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'phone_number', 'username', 'email', 'address','user_type', 'logo', 'dob', 'date_joined', 'city', 'province', 'occupation','course']
+        fields = ['id', 'full_name', 'phone_number','is_active','is_deleted','username', 'email', 'address','user_type', 'logo', 'dob', 'date_joined', 'city', 'province', 'occupation','course']
 
     def get_city(self, instance):
         if instance.city:

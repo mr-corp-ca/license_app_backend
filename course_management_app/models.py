@@ -79,3 +79,20 @@ class UserSelectedCourses(BaseModelWithCreatedInfo):
 
     def __str__(self):
         return f"Profile of {self.user.username}"
+    
+
+class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
+    PACKAGE_PLAN_CHOICE = [
+        ('month','Month'),
+        ('half-year','Six-Month'),
+        ('year','Year'),
+    ]
+
+    price = models.FloatField(default=0.0,verbose_name='Subscription Price')
+    package_plan = models.CharField(max_length=255,choices=PACKAGE_PLAN_CHOICE,verbose_name='Subscription plan')
+
+
+class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
+    expired = models.DateTimeField(verbose_name='Package Expired')
