@@ -49,10 +49,10 @@ CORS_ORIGIN_WHITELIST = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.10.40:9000/',
-    'http://api.thegearup.ca/',
-    'https://api.thegearup.ca/',
-    'http://192.168.10.95:9000/'
+    'http://192.168.10.40:9000',
+    'http://api.thegearup.ca',
+    'https://api.thegearup.ca',
+    'http://192.168.10.95:9000'
 
 ]
 
