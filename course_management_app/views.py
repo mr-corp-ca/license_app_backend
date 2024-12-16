@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
+from user_management_app.threads import *
+import threading
 import json
 # Create your views here.
 
@@ -235,3 +237,44 @@ class DiscountOfferApiView(APIView):
             return Response(
                 {'success': False, 'response': {'message': first_error_message}},
                 status=status.HTTP_400_BAD_REQUEST)
+
+class CertificateCreateAPIView(APIView):
+    def post(self, request):
+        user = request.user
+        try:
+            request.data._mutable = True
+        except:
+            pass
+        
+        request.data['created_by'] = user.id
+
+        serializer = CertificateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_201_CREATED)
+        return Response({'success': False, 'response': {'errors': serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, id):
+        image = request.data.get('image')
+        email = request.data.get('email')
+
+        certificate = Certificate.objects.get(id=id)
+
+
+        if not image or not email:
+            return Response({'success': False, 'response': {'message': 'Image and Email is required!'}}, 
+                            status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CertificateSerializer(certificate, data=request.data, partial=True)
+        if serializer.is_valid():
+            certificate_image = serializer.save()
+
+            try:
+                t = threading.Thread(target=send_email_certificate,
+                            args=[certificate_image.image.url, email],
+                            )
+                t.start()
+            except Exception as e:
+                pass
+            return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
+        return Response({'success': False, 'response': {'errors': serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)

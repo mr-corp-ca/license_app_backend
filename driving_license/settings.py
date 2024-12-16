@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+import firebase_admin
+from firebase_admin import credentials
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -35,6 +37,7 @@ INSTALLED_APPS = [
     'user_management_app',
     'course_management_app',
     'admin_dashboard',
+    'fcm_django',
 
 ]
 
@@ -137,6 +140,9 @@ REST_FRAMEWORK = {
   }
 
 
+cred = credentials.Certificate("creds/gearup-f9aa6-firebase-adminsdk-tfvhx-345813eaed.json")
+firebase_admin.initialize_app(cred)
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -183,3 +189,6 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 SITE_ID = 1
+
+
+DOMAIN = 'http://127.0.0.1:8000'

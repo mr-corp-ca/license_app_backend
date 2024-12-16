@@ -48,3 +48,15 @@ TRANSACTION_CHOICES = [
     ('deposit', 'Deposit'), 
     ('withdraw', 'Withdraw')
     ]
+
+STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+]
+
+NOTIFICATION_TYPE_CHOICES = [
+    ('sms', 'SMS'),
+    ('email', 'EMAIL'),
+    ('push-notification', 'Push Notification'),
+]

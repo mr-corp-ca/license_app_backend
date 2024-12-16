@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import *
-
+from driving_license import settings
 class DiscountOfferUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -65,3 +65,22 @@ class GETDiscountOfferSerializer(serializers.ModelSerializer):
 
     def get_user(self, instance):
         return DiscountOfferUserSerializer(instance.user).data
+
+class CertificateSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Certificate
+        fields = ['id', 'name', 'date', 'about', 'signature', 'logo', 'email', 'created_by', 'image']
+
+    def get_logo(self, instance):
+        if instance.logo:
+            domain = getattr(settings, 'DOMAIN', '')
+            return f"{domain}{instance.logo.url}"
+        return None
+
+    def get_image(self, instance):
+        if instance.image:
+            domain = getattr(settings, 'DOMAIN', '')
+            return f"{domain}{instance.image.url}"

@@ -8,6 +8,7 @@ from django.db.models import Q
 from rest_framework import status
 from django.core.mail import send_mail
 from rest_framework.views import APIView
+from .threads import *
 from user_management_app.constants import sendSMS
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
@@ -477,3 +478,50 @@ class SocialLoginApiView(APIView):
 
         return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
                         status=status.HTTP_200_OK)
+    
+class UserNotificationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user_filter = request.data.get('user_filter')
+        noti_type = request.data.get('noti_type')
+        all_users = User.objects.all()
+
+        if user_filter:
+            all_users = all_users.filter(id=user_filter)
+
+        for user in all_users:
+            try:
+                request.data._mutable = True
+            except:
+                pass
+
+            request.data['user'] = user.id
+
+            if noti_type == 'push-notification':
+                serializer = UserNotificationSerializer(data=request.data)
+                if serializer.is_valid():
+                    notification = serializer.save()
+                    title = request.data.get('title', 'New Notification')
+                    message = request.data.get('description', 'You have a new notification.')
+                    send_push_notification(user, title, message)
+                else:
+                    return Response({"success": False, 'response': {"message": serializer.errors}},
+                                     status=status.HTTP_400_BAD_REQUEST)
+
+            elif noti_type == 'sms':
+                message = request.data.get('description', 'You have a new notification.')
+                send_sms(user.phone_number, message) 
+
+            elif noti_type == 'email':
+                subject = request.data.get('title', 'New Notification')
+                message = request.data.get('description', 'You have a new notification.')
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+
+            else:
+                return Response(
+                    {"success": False, 'response': {"message": "Invalid notification type."}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        return Response({"success": True, 'response': {"message": "Notifications sent successfully."}}, status=status.HTTP_200_OK)

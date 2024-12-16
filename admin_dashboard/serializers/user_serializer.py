@@ -39,4 +39,4 @@ class AdminUserGetSerializer(serializers.ModelSerializer):
             return None
         
     def get_occupation(self, instance):
-        return 'Soft ENgineer'
+        return 'Soft Engineer'

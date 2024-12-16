@@ -1,5 +1,4 @@
 import threading
-
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
 from course_management_app.models import Course
 from user_management_app.models import TransactionHistroy, User

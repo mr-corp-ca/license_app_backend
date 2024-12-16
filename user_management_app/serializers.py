@@ -5,19 +5,22 @@ from .models import *
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number', 'city', 'province', 'logo']
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name',
+                  'phone_number', 'city', 'province', 'logo']
 
 class UserGETSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number']
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name',
+                  'phone_number']
 
 class DefaultUserSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
     province = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'phone_number', 'province', 'city']
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name',
+                  'phone_number', 'province', 'city']
 
     def get_city(self, instance):
         if instance.city:
@@ -34,7 +37,8 @@ class DefaultUserSerializer(serializers.ModelSerializer):
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DriverProfile
-        fields = ['user', 'user_logo', 'institude_name', 'description', 'institude_image', 'trainer_name', 'license_no', 'address', 'total_lesson', 'price']
+        fields = ['user', 'user_logo', 'institude_name', 'description', 'institude_image', 
+                  'trainer_name', 'license_no', 'address', 'total_lesson', 'price']
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -51,3 +55,10 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionHistroy
         fields = ['id', 'wallet', 'amount', 'transaction_type']
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotification
+        fields = ['id', 'user', 'status', 'noti_type', 'description'
+]   

@@ -15,4 +15,7 @@ urlpatterns = [
     path('ForgotPasswordView', ForgotPasswordView.as_view()),
     path('MobileNumberVerify', MobileNumberVerifyAPIView.as_view()),
     path('RatingView', RatingView.as_view()),
+
+    path('UserNotification/', UserNotificationAPIView.as_view()),
+
 ]

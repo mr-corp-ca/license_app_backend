@@ -19,4 +19,8 @@ urlpatterns = [
     path('EditDiscountOffer/<int:id>', DiscountOfferApiView.as_view()),
     path('DeleteDiscountOffer/<int:id>', DiscountOfferApiView.as_view()),
 
+
+    path('certificates/', CertificateCreateAPIView.as_view()),
+    path('certificates/<int:id>/', CertificateCreateAPIView.as_view()),
+
 ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate
 
 # Register your models here.
 
@@ -46,3 +46,10 @@ class LicenseCategoryAdmin(admin.ModelAdmin):
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'created_at')
+
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'date', 'created_by', 'email', 'signature', 'created_at')
+    search_fields = ('name', 'about', 'email', 'created_by__username', 'created_by__first_name', 'created_by__last_name')
+    ordering = ('-created_at',)
+    list_filter = ('date', 'created_by')

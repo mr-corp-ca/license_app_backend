@@ -123,5 +123,6 @@ class TransactionHistroy(BaseModelWithCreatedInfo):
 
 class UserNotification(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.CharField(max_length=255) 
-    descriptiom = models.TextField() 
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES)
+    noti_type = models.CharField(max_length=255, choices=NOTIFICATION_TYPE_CHOICES) 
+    description = models.TextField() 

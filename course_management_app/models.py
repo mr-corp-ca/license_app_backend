@@ -66,3 +66,17 @@ class DiscountOffer(BaseModelWithCreatedInfo):
     discount = models.PositiveIntegerField(default=0, verbose_name="Discount & offers(%)")
     start_date = models.DateField(verbose_name="Start Date")
     end_date = models.DateField(verbose_name="End Date")
+
+
+class Certificate(BaseModelWithCreatedInfo):
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+    about = models.TextField(null=True, blank=True)
+    signature = models.CharField(max_length=255)
+    logo = models.ImageField(upload_to='logos/')
+    image = models.ImageField(upload_to='certificate/', null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
