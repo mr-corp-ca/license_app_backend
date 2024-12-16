@@ -14,7 +14,7 @@ driving_license/__pycache__/
 course_management_app/__pycache__/
 admin_dashboard/__pycache__/
 utils_app/__pycache__/
-creds
+
 # SQLite database file
 db.sqlite3
 
