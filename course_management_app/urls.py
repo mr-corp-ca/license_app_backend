@@ -23,4 +23,5 @@ urlpatterns = [
     path('certificates/', CertificateCreateAPIView.as_view()),
     path('certificates/<int:id>/', CertificateCreateAPIView.as_view()),
 
+    path('AddVehicle',AddVehicleApiView.as_view(),name= 'add-vehicle')
 ]

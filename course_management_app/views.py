@@ -278,3 +278,52 @@ class CertificateCreateAPIView(APIView):
                 pass
             return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
         return Response({'success': False, 'response': {'errors': serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class AddVehicleApiView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        try:
+            # Ensure the user is authenticated
+            user = request.user
+
+            vehicles = Vehicle.objects.filter(user=user)
+
+            for vehicle in vehicles:
+
+                if vehicle.booking_status == 'booked':
+                    vehicle.booking_status = 'booked'
+                else:
+                    vehicle.booking_status = 'free'
+
+            serializer = VehicleSerializer(vehicles, many=True)
+            return Response({"status": True, "response": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": "An error occurred.", "details": str(e)}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def post(self,request):
+        try:
+            
+            user = request.user.id
+            try:
+                request.data._mutable = True
+
+            except:
+                pass
+            
+            request.data['user'] = user
+            serializer = VehicleSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response({'status': True,'response':{'data':serializer.data}}, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            return Response(
+            {'status': False,'response':{'message': f"An error occurred.': {str(e)}"}}, 
+            status=status.HTTP_400_BAD_REQUEST)

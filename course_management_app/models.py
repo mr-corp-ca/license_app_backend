@@ -34,6 +34,10 @@ class Lesson(BaseModelWithCreatedInfo):
     image = models.ImageField(upload_to='Lession/images')
 
 class Vehicle(BaseModelWithCreatedInfo):
+    VEHICLE_STATUS_CHOICES = [
+        ('free', 'Free'),
+        ('booked', 'Booked'),
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255, verbose_name="Vehicle Name")
@@ -42,6 +46,8 @@ class Vehicle(BaseModelWithCreatedInfo):
     license_number = models.CharField(max_length=100, unique=True, verbose_name="License Number")
     vehicle_model = models.CharField(max_length=100, verbose_name="Vehicle Model")
     image = models.ImageField(upload_to='vehicle_images/', blank=True, null=True, verbose_name="Vehicle Image")
+    booking_status = models.CharField(max_length=10,choices=VEHICLE_STATUS_CHOICES,default='free',verbose_name="Vehcile Status")
+
 
     def __str__(self):
         return f"{self.name} ({self.vehicle_registration_no})"
@@ -80,3 +86,26 @@ class Certificate(BaseModelWithCreatedInfo):
 
     def __str__(self):
         return self.name
+class UserSelectedCourses(BaseModelWithCreatedInfo):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='course_profile')
+    courses = models.ManyToManyField(Course, related_name='user_profiles')
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+    
+
+class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
+    PACKAGE_PLAN_CHOICE = [
+        ('month','Month'),
+        ('half-year','Six-Month'),
+        ('year','Year'),
+    ]
+
+    price = models.FloatField(default=0.0,verbose_name='Subscription Price')
+    package_plan = models.CharField(max_length=255,choices=PACKAGE_PLAN_CHOICE,verbose_name='Subscription plan')
+
+
+class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
+    expired = models.DateTimeField(verbose_name='Package Expired')

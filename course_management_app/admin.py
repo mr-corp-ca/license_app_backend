@@ -1,9 +1,7 @@
 from django.contrib import admin
-
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses
 
 # Register your models here.
-
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
@@ -53,3 +51,5 @@ class CertificateAdmin(admin.ModelAdmin):
     search_fields = ('name', 'about', 'email', 'created_by__username', 'created_by__first_name', 'created_by__last_name')
     ordering = ('-created_at',)
     list_filter = ('date', 'created_by')
+
+admin.site.register(UserSelectedCourses)
