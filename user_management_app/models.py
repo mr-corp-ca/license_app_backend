@@ -127,3 +127,13 @@ class UserNotification(BaseModelWithCreatedInfo):
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
     noti_type = models.CharField(max_length=255, choices=NOTIFICATION_TYPE_CHOICES) 
     description = models.TextField() 
+
+
+class LearnerReport(BaseModelWithCreatedInfo):
+    learner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learner')
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructor')
+    reason = models.CharField(max_length=255, null=True, blank=True, choices=REPORT_REASONS)
+    description = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Report for {self.learner.username} - {self.reason}"

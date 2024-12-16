@@ -1,6 +1,6 @@
 from django.db import models
 
-from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES
+from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES, PACKAGE_PLAN_CHOICE
 from user_management_app.models import User
 from utils_app.models import BaseModelWithCreatedInfo
 
@@ -95,15 +95,9 @@ class UserSelectedCourses(BaseModelWithCreatedInfo):
     
 
 class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
-    PACKAGE_PLAN_CHOICE = [
-        ('month','Month'),
-        ('half-year','Six-Month'),
-        ('year','Year'),
-    ]
 
     price = models.FloatField(default=0.0,verbose_name='Subscription Price')
     package_plan = models.CharField(max_length=255,choices=PACKAGE_PLAN_CHOICE,verbose_name='Subscription plan')
-
 
 class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

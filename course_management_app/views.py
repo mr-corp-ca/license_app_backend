@@ -284,7 +284,6 @@ class AddVehicleApiView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         try:
-            # Ensure the user is authenticated
             user = request.user
 
             vehicles = Vehicle.objects.filter(user=user)

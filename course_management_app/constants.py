@@ -11,3 +11,9 @@ OFFER_TYPE_CHOICES = [
         ('percentage_discount', 'Percentage Discount'),
         ('custom_offer', 'Custom Offer'),
     ]
+
+PACKAGE_PLAN_CHOICE = [
+        ('month','Month'),
+        ('half-year','Six-Month'),
+        ('year','Year'),
+    ]
