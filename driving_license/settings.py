@@ -19,7 +19,8 @@ ALLOWED_HOSTS = [
                 'localhost',
                 '127.0.0.1',
                 '192.168.10.18',
-                'api.thegearup.ca'
+                'api.thegearup.ca',
+                '192.168.10.95'
 
                  ]
 
@@ -30,8 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
     'rest_framework.authtoken',
+    'corsheaders',
     'rest_framework',
     'utils_app',
     'user_management_app',
@@ -48,13 +49,15 @@ CORS_ORIGIN_WHITELIST = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.10.40:9000/',
-    'http://api.thegearup.ca/'
+    'http://192.168.10.40:9000',
+    'http://api.thegearup.ca',
+    'https://api.thegearup.ca',
+    'http://192.168.10.95:9000'
 
 ]
 
-CSRF_COOKIE_SECURE = True
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
