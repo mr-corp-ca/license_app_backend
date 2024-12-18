@@ -1,4 +1,5 @@
 from django.db import models
+from course_management_app.models import Course
 from utils_app.models import BaseModelWithCreatedInfo
 from user_management_app.constants import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -127,3 +128,14 @@ class UserNotification(BaseModelWithCreatedInfo):
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
     noti_type = models.CharField(max_length=255, choices=NOTIFICATION_TYPE_CHOICES) 
     description = models.TextField() 
+
+
+# class InstructorProfile(BaseModelWithCreatedInfo):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     institute_name = models.CharField(max_length=255,null=True,blank=True)
+#     institute_image = models.ImageField(upload_to='media/institute_image')
+#     description = models.TextField(null=True, blank=True)
+
+#     def __str__(self) :
+#         return f"Institute Name {self.institute_name}"
+ 
