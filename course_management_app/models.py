@@ -36,7 +36,8 @@ class Vehicle(BaseModelWithCreatedInfo):
         ('free', 'Free'),
         ('booked', 'Booked'),
     ]
-    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE,related_name='user_vehicle')
+    instructor = models.ForeignKey('user_management_app.User',on_delete=models.CASCADE, null=True, blank=True, related_name='instructor_vehicle')
 
     name = models.CharField(max_length=255, verbose_name="Vehicle Name")
     trainer_name = models.CharField(max_length=255, verbose_name="Trainer Name")

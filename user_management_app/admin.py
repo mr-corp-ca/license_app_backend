@@ -46,3 +46,5 @@ class UserNotificationAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'created_at']
     search_fields = ('user__username', 'user__full_name', 'user__email',  'user__first_name', 'user__last_name')
     ordering = ('-created_at',)
+
+admin.site.register(SchoolSetting)

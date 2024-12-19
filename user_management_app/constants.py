@@ -38,6 +38,12 @@ USER_STATUS_CHOICES = [
     ('rejected', 'Rejected'),
 ]
 
+USER_STATUS_CHOICES = [
+     ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+]
+
 RATING_CHOICES = [
         (1, '1 - Disappointed'),
         (2, '2'),
