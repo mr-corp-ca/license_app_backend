@@ -1,5 +1,7 @@
 from django.db import models
+
 from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES
+from user_management_app.models import User
 from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
