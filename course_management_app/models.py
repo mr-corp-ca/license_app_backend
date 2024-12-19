@@ -1,7 +1,5 @@
 from django.db import models
-
 from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES
-from user_management_app.models import User
 from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
@@ -14,7 +12,7 @@ class Service(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255)
 
 class Course(BaseModelWithCreatedInfo):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user')
     license_category = models.ManyToManyField(LicenseCategory, related_name='course_license_category', blank=True)
     services = models.ManyToManyField(Service, related_name='course_services', blank=True)
 
@@ -38,7 +36,7 @@ class Vehicle(BaseModelWithCreatedInfo):
         ('free', 'Free'),
         ('booked', 'Booked'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255, verbose_name="Vehicle Name")
     trainer_name = models.CharField(max_length=255, verbose_name="Trainer Name")
@@ -53,7 +51,7 @@ class Vehicle(BaseModelWithCreatedInfo):
         return f"{self.name} ({self.vehicle_registration_no})"
 
 class Package(BaseModelWithCreatedInfo):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='package_user')
 
     name = models.CharField(max_length=255, verbose_name="Package Name")
     price = models.FloatField(default=0.0, verbose_name="Package Price")
@@ -67,7 +65,7 @@ class DiscountOffer(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255, verbose_name="Package Name")
     audience = models.CharField(max_length=255, verbose_name="Package Name", choices=AUDIENCE_CHOICES)
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='discountooffer_user')
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     discount = models.PositiveIntegerField(default=0, verbose_name="Discount & offers(%)")
     start_date = models.DateField(verbose_name="Start Date")
@@ -82,14 +80,14 @@ class Certificate(BaseModelWithCreatedInfo):
     logo = models.ImageField(upload_to='logos/')
     image = models.ImageField(upload_to='certificate/', null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='certificate_user')
 
     def __str__(self):
         return self.name
 
 
 class UserSelectedCourses(BaseModelWithCreatedInfo):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='course_profile')
+    user = models.OneToOneField('user_management_app.User', on_delete=models.CASCADE, related_name='course_profile')
     courses = models.ManyToManyField(Course, related_name='user_profiles')
 
     def __str__(self):
@@ -108,6 +106,6 @@ class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
 
 
 class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='subscription_user')
     package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
     expired = models.DateTimeField(verbose_name='Package Expired')

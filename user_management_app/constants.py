@@ -29,6 +29,13 @@ USER_TYPE_CHOICES = [
     ('admin', 'Owner Admin'),
     ('learner', 'Learner'),
     ('instructor', 'Instructor'),
+    ('school', 'School'),
+]
+
+USER_STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
 ]
 
 RATING_CHOICES = [

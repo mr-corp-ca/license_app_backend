@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from driving_license import settings
+from user_management_app.models import*
 class DiscountOfferUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

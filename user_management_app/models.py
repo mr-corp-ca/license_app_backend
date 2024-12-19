@@ -52,6 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     province = models.ForeignKey('utils_app.Province', on_delete=models.SET_NULL, null=True, blank=True)
     city = models.ForeignKey('utils_app.City', on_delete=models.SET_NULL, null=True, blank=True)
     social_platform = models.CharField(max_length=255, choices=SOCIAL_PLATFORM_CHOICES, null=True, blank=True)
+    user_status = models.CharField(max_length=255,  choices=USER_STATUS_CHOICES, default='accepted', null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
     
     USERNAME_FIELD = 'username'
