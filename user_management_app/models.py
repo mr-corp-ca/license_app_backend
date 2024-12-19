@@ -52,6 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     province = models.ForeignKey('utils_app.Province', on_delete=models.SET_NULL, null=True, blank=True)
     city = models.ForeignKey('utils_app.City', on_delete=models.SET_NULL, null=True, blank=True)
     social_platform = models.CharField(max_length=255, choices=SOCIAL_PLATFORM_CHOICES, null=True, blank=True)
+    user_status = models.CharField(max_length=255,  choices=USER_STATUS_CHOICES, default='pending', null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
     
     USERNAME_FIELD = 'username'
@@ -130,12 +131,7 @@ class UserNotification(BaseModelWithCreatedInfo):
     description = models.TextField() 
 
 
-# class InstructorProfile(BaseModelWithCreatedInfo):
-#     user = models.ForeignKey(User, on_delete=models.CASCADE)
-#     institute_name = models.CharField(max_length=255,null=True,blank=True)
-#     institute_image = models.ImageField(upload_to='media/institute_image')
-#     description = models.TextField(null=True, blank=True)
-
-#     def __str__(self) :
-#         return f"Institute Name {self.institute_name}"
+class SchoolSetting(BaseModelWithCreatedInfo):
+    user =  models.OneToOneField(User,on_delete=models.CASCADE,related_name='School_user')
+    instructor = models.ManyToManyField(User,related_name='School_instructor')
  

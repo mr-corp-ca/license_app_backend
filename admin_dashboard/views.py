@@ -1,7 +1,7 @@
 import threading
 import calendar
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
-from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer
+from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer,SchoolApprovalSerializer
 from course_management_app.models import Course, UserSelectedCourses
 from user_management_app.models import TransactionHistroy, User
 from .models import *
@@ -338,3 +338,22 @@ class AdminDeleteUserApiView(APIView):
 
         except Exception as e:
             return Response({'status': False, 'message': 'An error occurred.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class InstituteApprovaldetailApiView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request,id):
+        try:
+            user = User.objects.filter(id=id).first()
+            if not user:
+                return Response({'status': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = SchoolApprovalSerializer(user)
+            return Response(
+                {'status': True, 'data': serializer.data},
+                status=status.HTTP_200_OK
+            )
+        
+        except Exception as e:
+            return Response(
+                {'status': False, 'message': f'An error occurred: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
