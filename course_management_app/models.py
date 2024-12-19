@@ -86,6 +86,8 @@ class Certificate(BaseModelWithCreatedInfo):
 
     def __str__(self):
         return self.name
+
+
 class UserSelectedCourses(BaseModelWithCreatedInfo):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='course_profile')
     courses = models.ManyToManyField(Course, related_name='user_profiles')
