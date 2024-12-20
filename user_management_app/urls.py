@@ -10,12 +10,11 @@ urlpatterns = [
     path('SocialLogin/', SocialLoginApiView.as_view()),
 
     path('signup/', UserApiView.as_view()),
-    path('DriverProfileView', DriverProfileView.as_view()),
-    path('ResendOTPView', ResendOTPView.as_view()),
-    path('ForgotPasswordView', ForgotPasswordView.as_view()),
-    path('MobileNumberVerify', MobileNumberVerifyAPIView.as_view()),
-    path('RatingView', RatingView.as_view()),
-
+    path('DriverProfileView/', DriverProfileView.as_view()),
+    path('ResendOTPView/', ResendOTPView.as_view()),
+    path('ForgotPasswordView/', ForgotPasswordView.as_view()),
+    path('MobileNumberVerify/', MobileNumberVerifyAPIView.as_view()),
+    path('RatingView/', RatingView.as_view()),
     path('UserNotification/', UserNotificationAPIView.as_view()),
-
+    path('SearchSchool/',SearchSchool.as_view())
 ]
