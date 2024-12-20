@@ -1,7 +1,7 @@
 import threading
 import calendar
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
-from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer,SchoolApprovalSerializer
+from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer,SchoolApprovalSerializer,AdminDrivingSchoolListSerializer
 from course_management_app.models import Course, UserSelectedCourses
 from user_management_app.models import TransactionHistroy, User
 from .models import *
