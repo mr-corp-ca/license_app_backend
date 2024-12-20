@@ -1,5 +1,5 @@
 from django.db import models
-from course_management_app.models import Course
+# from course_management_app.models import Course
 from utils_app.models import BaseModelWithCreatedInfo
 from user_management_app.constants import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
