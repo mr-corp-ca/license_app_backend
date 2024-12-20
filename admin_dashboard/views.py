@@ -4,6 +4,7 @@ from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, 
 from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer,SchoolApprovalSerializer,AdminDrivingSchoolListSerializer
 from course_management_app.models import Course, UserSelectedCourses
 from user_management_app.models import TransactionHistroy, User
+from user_management_app.threads import send_push_notification
 from .models import *
 from .serializers import *
 from itertools import chain
@@ -355,11 +356,27 @@ class DrivingSchoolAPIView(APIView):
 
     def patch(self, request, id):
             user_status = request.data.get('user_status')
-            user = User.objects.get(id=id)
+            user = User.objects.filter(id=id).first()
+            if not user:
+                return Response({'success':False, 'response':{'message': 'user not found!'}}, status=status.HTTP_404_NOT_FOUND)
+
             
             if user_status:
                 user.user_status = user_status
             user.save()
+
+            # Sending notifications
+            if user_status in ['accepted', 'rejected']:
+                if user_status == 'accepted':
+                    title = 'Enrollment Approved!'
+                    message = "Congratulations! Your enrollment has been successfully approved by the Driving License School App. Welcome aboard!"
+                elif user_status == 'rejected':
+                    title = 'Enrollment Rejected'
+                    message = "We regret to inform you that your enrollment has been rejected. Please contact support for further assistance."
+
+                noti_type='general'
+                send_push_notification(user, title, message, noti_type)
+                UserNotification.objects.create(user=user, description=message, status=user_status, noti_type=noti_type)
             return Response({"message": "Status Updated successfully!"}, status=status.HTTP_200_OK)
 
 
