@@ -3,6 +3,7 @@ import threading
 from .models import *
 from .serializers import *
 from random import choice
+from django.db.models import Avg
 from itertools import chain
 from django.db.models import Q
 from rest_framework import status
@@ -558,3 +559,73 @@ class LearnerReportAPIVIEW(APIView):
             return Response({"success": True, "message": f"Report created successfully by {user_type}.", "data": serializer.data}, status=status.HTTP_201_CREATED)
         else:
             return Response({'success': False, 'message': 'Invalid data provided.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SearchSchool(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            license_category = request.query_params.get('license_category')
+            lesson = request.query_params.get('lesson')  
+            price = request.query_params.get('price')
+
+            schools = User.objects.filter(user_type='school')
+
+            filtered_schools = []
+
+            for school in schools:
+                courses = school.course_user.all()
+
+                if license_category:
+                    courses = courses.filter(license_category__name__icontains=license_category)
+
+                if lesson:
+                    try:
+                        lesson_number = int(lesson)
+                        courses = courses.filter(Q(lesson_numbers=lesson_number) | Q(lesson_numbers__lte=lesson_number))
+                    except ValueError:
+                        return Response({'success': False, 'message': 'Invalid lesson number format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                if price:
+                    courses = courses.filter(price__lte=float(price))
+
+                if not courses.exists():
+                    continue  
+
+                school_data = {
+                    "id": school.id,
+                    "name": school.full_name,
+                    "address": school.address,
+                    "logo": school.logo.url if school.logo else None,
+                    "courses": [
+                        {
+                            "id": course.id,
+                            "title": course.title,
+                            "price": course.price,
+                            "lesson_numbers": course.lesson_numbers,
+                        }
+                        for course in courses
+                    ],
+                    "vehicles": [
+                        {
+                            "id": vehicle.id,
+                            "name": vehicle.name,
+                            "vehicle_model": vehicle.vehicle_model,
+                        }
+                        for vehicle in school.user_vehicle.all()
+                    ],
+                    "rating": school.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None),
+                }
+                filtered_schools.append(school_data)
+
+            sorted_schools = sorted(filtered_schools, key=lambda x: x['name'])
+
+            if not sorted_schools:
+                return Response({'success': False, 'message': 'No schools found matching the criteria.'}, status=status.HTTP_404_NOT_FOUND)
+
+            return Response({'success': True, 'data': sorted_schools}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error=====>", e)
+            return Response({'success': False, 'message': 'Invalid data provided.'}, status=status.HTTP_400_BAD_REQUEST)
