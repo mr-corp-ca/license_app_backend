@@ -62,3 +62,9 @@ class UserNotificationSerializer(serializers.ModelSerializer):
         model = UserNotification
         fields = ['id', 'user', 'status', 'noti_type', 'description'
 ]   
+        
+
+class LearnerReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LearnerReport
+        fields = ['id', 'learner', 'instructor', 'reason', 'description']

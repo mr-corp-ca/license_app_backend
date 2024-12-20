@@ -73,3 +73,10 @@ NOTIFICATION_TYPE_CHOICES = [
     ('email', 'EMAIL'),
     ('push-notification', 'Push Notification'),
 ]
+
+REPORT_REASONS = [ 
+    ('waiting-too-long','Waiting too long on a location'), 
+    ('misbehaving', 'Misbehaving'), 
+    ('abusing', 'Abusing'), 
+    ('others', 'Others')
+]

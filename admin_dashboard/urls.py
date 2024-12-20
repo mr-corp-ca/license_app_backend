@@ -10,5 +10,10 @@ urlpatterns = [
     path('UserProfile/<int:id>/',UserProfileView.as_view()),
     path('UserInactive/<int:id>/',UserInactiveApiView.as_view()),
     path('DeleteUser/<int:id>/',AdminDeleteUserApiView.as_view()),
-    path('InstituteDetail/<int:id>/',InstituteApprovaldetailApiView.as_view())
+    path('InstituteDetail/<int:id>/',InstituteApprovaldetailApiView.as_view()),
+    path('DrivingSchoolList/',DrivingSchoolListAPIView.as_view()),
+    path('SchoolStatusUpdate/<int:id>/',DrivingSchoolAPIView.as_view()),
 ]
+    
+
+

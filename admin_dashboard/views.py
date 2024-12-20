@@ -8,7 +8,6 @@ from .models import *
 from .serializers import *
 from itertools import chain
 from course_management_app.serializers import *
-
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
@@ -338,6 +337,31 @@ class AdminDeleteUserApiView(APIView):
 
         except Exception as e:
             return Response({'status': False, 'message': 'An error occurred.', 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DrivingSchoolListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    queryset = User.objects.filter(user_type='school').order_by('-date_joined')
+    serializer_class = AdminDrivingSchoolListSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['full_name']
+    filterset_fields = ['user_status']
+
+
+class DrivingSchoolAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id):
+            user_status = request.data.get('user_status')
+            user = User.objects.get(id=id)
+            
+            if user_status:
+                user.user_status = user_status
+            user.save()
+            return Response({"message": "Status Updated successfully!"}, status=status.HTTP_200_OK)
+
 
 class InstituteApprovaldetailApiView(APIView):
     permission_classes = [IsAuthenticated]

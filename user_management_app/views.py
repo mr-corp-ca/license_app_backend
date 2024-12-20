@@ -530,3 +530,31 @@ class UserNotificationAPIView(APIView):
                 )
 
         return Response({"success": True, 'response': {"message": "Notifications sent successfully."}}, status=status.HTTP_200_OK)
+
+
+class LearnerReportAPIVIEW(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        learner = request.data.get('learner')
+        instructor = request.data.get('instructor')
+
+        if not learner or not instructor:
+            return response({'success':False, 'response':{'messages': 'learner and instructor both required!'}}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if user.id == learner:
+            user_type = "learner"
+        elif user.id == instructor:
+            user_type = "instructor"
+        else:
+            return Response({'success': False, 'message': 'User must be either learner or instructor in the report.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        request.data['user_type'] = user_type
+        
+        serializer = LearnerReportSerializer(data=request.data)
+        if serializer.is_valid():
+            report = serializer.save()
+            return Response({"success": True, "message": f"Report created successfully by {user_type}.", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'success': False, 'message': 'Invalid data provided.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

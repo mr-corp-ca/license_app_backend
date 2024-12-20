@@ -117,3 +117,18 @@ class SchoolApprovalSerializer(serializers.ModelSerializer):
             return vehicle.count()
         return 0
     
+    
+class AdminCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'lesson_numbers']
+
+class AdminDrivingSchoolListSerializer(serializers.ModelSerializer):
+    course = serializers.SerializerMethodField()
+    class Meta:
+        model = User
+        fields = ['id', 'logo', 'course', 'full_name', 'user_type', 'user_status']
+
+    def get_course(self, instance): 
+        courses = Course.objects.filter(user=instance)
+        return AdminCourseSerializer(courses, many=True).data
