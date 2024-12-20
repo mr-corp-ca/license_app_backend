@@ -69,9 +69,7 @@ STATUS_CHOICES = [
 ]
 
 NOTIFICATION_TYPE_CHOICES = [
-    ('sms', 'SMS'),
-    ('email', 'EMAIL'),
-    ('push-notification', 'Push Notification'),
+    ('general', 'General'),
 ]
 
 REPORT_REASONS = [ 

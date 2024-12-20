@@ -6,7 +6,11 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from twilio.rest import Client
 import firebase_admin
+from datetime import datetime
 from firebase_admin import messaging
+from fcm_django.models import FCMDevice
+from firebase_admin.messaging import Message
+from firebase_admin.messaging import Notification as FB_Notification
 
 def send_email_code(code, user):
     if code is None:
@@ -43,28 +47,31 @@ def send_email_code(code, user):
         print('******  email  **',e)
 
 
-
-
-if not firebase_admin._apps:
-    firebase_admin.initialize_app()
-
-def send_push_notification(user, title, message):
-    fcm_token = user.profile.fcm_token
-
-    if fcm_token:
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=message,
-            ),
-            token=fcm_token,
-        )
-
-        response = messaging.send(message)
-
-        print(f'Push notification sent: {response}')
-
-
+def send_push_notification(user, title, message, notification_type):
+    current_datetime = datetime.now()
+    try:
+        fb_body = {
+            'created_at': str(current_datetime),
+            'text': message,
+            'type': 'accept',
+            'notification_type': notification_type,
+        }
+        
+        devices = FCMDevice.objects.filter(user=user)
+        
+        for device in devices:
+            respoonse = device.send_message(
+                Message(
+                    data=fb_body,
+                    notification=FB_Notification(
+                        title=title,
+                        body=fb_body['text'],
+                    )
+                )
+            )
+            print('*******', respoonse)
+    except Exception as e:
+        print('******* errorrr *****', e)
 
 def send_sms(phone_number, message):
     account_sid = settings.ACCOUNT_SID
