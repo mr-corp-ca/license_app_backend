@@ -21,6 +21,9 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ObjectDoesNotExist
 import stripe
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -566,111 +569,89 @@ class SearchSchool(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        response_data = {'data': []}
         try:
             license_category = request.query_params.get('license_category')
             lesson = request.query_params.get('lesson')
+
             learner_lat = request.query_params.get('learner_lat')
             learner_long = request.query_params.get('learner_long')
             near_school = request.query_params.get('near_school')
-            price = request.query_params.get('price')
+            min_price = request.query_params.get('min_price')
+            max_price = request.query_params.get('max_price')
 
-            if near_school and (not learner_lat or not learner_long):
-                return Response({'success': False, 'message': 'Learner latitude and longitude are required!'}, 
-                                status=status.HTTP_400_BAD_REQUEST)
-            
-            radius = 2
-            max_radius = 5
+            # Search 
+            search_value = request.query_params.get('search_value')
+
+
             schools = User.objects.filter(user_type='school')
 
-            try:
-                learner_lat = float(learner_lat)
-                learner_long = float(learner_long)
-            except (TypeError, ValueError):
-                return Response({'success': False, 'message': 'Invalid latitude or longitude.'}, 
-                                status=status.HTTP_400_BAD_REQUEST)
+            if near_school:
+                if not learner_lat or not learner_long:
+                    return Response({'success': False, 'message': 'Learner latitude and longitude are required!'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            response_data = {
-                'nearby_schools': [],
-                'far_schools': []
-            }
+                try:
+                    learner_point = Point(float(learner_long), float(learner_lat), srid=4326)
+                except (TypeError, ValueError):
+                    return Response({'success': False, 'message': 'Invalid latitude or longitude.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            def filter_and_serialize_schools(radius_limit):
-                nearby_schools = []
-                far_schools = []
+                radius = 2
+                max_radius = 5
 
-                for school in schools:
-                    school_lat = school.lat
-                    school_long = school.long
-
-                    if not school_lat or not school_long:
-                        continue  
-
-                    distance = haversine(learner_lat, learner_long, school_lat, school_long)
-                    courses = school.course_user.all()
-
-                    if license_category:
-                        courses = courses.filter(license_category__name__icontains=license_category)
-                    
-                    if lesson:
-                        try:
-                            lesson_number = int(lesson)
-                            courses = courses.filter(
-                                Q(lesson_numbers=lesson_number) | Q(lesson_numbers__lte=lesson_number)
-                            )
-                        except ValueError:
-                            return {'success': False, 'message': 'Invalid lesson number format.'}, None
-
-                    if price:
-                        courses = courses.filter(price__lte=float(price))
-                    
-                    if not courses.exists():
-                        continue
-
-                    school_data = {
-                        'school': school,
-                        'courses': courses,
-                        'distance': distance
-                    }
-
-                    if distance <= radius_limit:
-                        nearby_schools.append(school_data)
-                    else:
-                        far_schools.append(school_data)
-                
-                return nearby_schools, far_schools
-
-            while radius <= max_radius:
-                nearby_schools, far_schools = filter_and_serialize_schools(radius)
-                
-                for school_data in nearby_schools:
-                    serializer = SchoolSerializer(
-                        school_data['school'], 
-                        context={'courses': school_data['courses']}
+                while radius <= max_radius:
+                    nearby_schools = (
+                        schools.annotate(distance=Distance('location', learner_point))
+                               .filter(distance__lte=D(km=radius))
+                               .distinct()
                     )
-                    serialized_data = serializer.data
-                    serialized_data['distance'] = f"{school_data['distance']:.2f} km"
-                    response_data['nearby_schools'].append(serialized_data)
-                
-                if response_data['nearby_schools']:
-                    break
 
-                radius += 3
+                    if nearby_schools.exists():
+                        schools = nearby_schools
+                        break
 
-            for school_data in far_schools:
-                serializer = SchoolSerializer(
-                    school_data['school'], 
-                    context={'courses': school_data['courses']}
+                    radius += 3
+
+            if license_category:
+                schools = schools.filter(course_user__license_category__name__icontains=license_category)
+
+            if lesson:
+                lesson_number = int(lesson)
+                schools = schools.filter(course_user__lesson_numbers__lte=lesson_number)
+
+            if min_price:
+                schools = schools.filter(course_user__price__gte=float(min_price))
+
+            if max_price:
+                schools = schools.filter(course_user__price__lte=float(max_price))
+
+            if search_value:
+                schools = schools.filter(
+                    Q(course_user__lesson_numbers__lte=int(search_value)) |
+                    Q(course_user__license_category__name__icontains=search_value) |
+                    Q(full_name__icontains=search_value) |
+                    Q(address__icontains=search_value) |
+                    Q(province__name__icontains=search_value) |
+                    Q(city__name__icontains=search_value) | 
+                    Q(course_user__title__icontains=search_value) | 
+                    Q(course_user__description__icontains=search_value) | 
+                    Q(course_user__services__name__icontains=search_value)
                 )
-                serialized_data = serializer.data
-                serialized_data['distance'] = f"{school_data['distance']:.2f} km"
-                response_data['far_schools'].append(serialized_data)
 
-            return Response({'success': True, 'data': response_data}, status=status.HTTP_200_OK)
+            for school in schools:
+                serializer = SchoolSerializer(school, context={'courses': school.course_user.all()})
+                serialized_data = serializer.data
+                if hasattr(school, 'distance'):
+                    serialized_data['distance'] = f"{school.distance.km:.2f} km"
+                response_data['data'].append(serialized_data)
+
+            return Response({'success': True, 'response': {"data": response_data}}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print("Error=====>", e)
-            return Response({'success': False, 'message': 'An unexpected error occurred.'}, 
+            return Response({'success': False, 'response': {"message": str(e)}},
                             status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class SchoolDetail(APIView):
