@@ -565,6 +565,7 @@ class LearnerReportAPIVIEW(APIView):
 class SearchSchool(APIView):
     permission_classes = [IsAuthenticated]
 
+
     def get(self, request):
         try:
             license_category = request.query_params.get('license_category')
