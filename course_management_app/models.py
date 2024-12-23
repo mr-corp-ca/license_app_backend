@@ -6,7 +6,6 @@ from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
 
-
 class LicenseCategory(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255)
 

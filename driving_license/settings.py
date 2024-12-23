@@ -31,13 +31,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework.authtoken',
-    'corsheaders',
     'rest_framework',
+    'corsheaders',
+    'fcm_django',
     'utils_app',
+    'admin_dashboard',
+    'timing_slot_app',
     'user_management_app',
     'course_management_app',
-    'admin_dashboard',
-    'fcm_django',
 
 ]
 

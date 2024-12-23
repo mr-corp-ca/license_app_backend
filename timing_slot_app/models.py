@@ -1,8 +1,8 @@
 from django.db import models
+from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
-
-class MonthlySchedule(models.Model):
+class MonthlySchedule(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='monthlyschedule_user')
     vehicle = models.ForeignKey('course_management_app.Vehicle', on_delete=models.CASCADE, related_name='monthlyschedule_vehicle')
 
@@ -18,4 +18,4 @@ class MonthlySchedule(models.Model):
         unique_together = ('user', 'date')
 
     def __str__(self):
-        return f"{self.user.username} - {self.date}"
+        return f"{self.user} - {self.date}"

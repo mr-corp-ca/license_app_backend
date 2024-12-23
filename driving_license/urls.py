@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/', include('course_management_app.urls')),
     path('api/', include('utils_app.urls')),
     path('api/', include('admin_dashboard.urls')),
+    path('api/', include('timing_slot_app.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
