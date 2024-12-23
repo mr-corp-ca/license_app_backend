@@ -569,74 +569,92 @@ class SearchSchool(APIView):
         try:
             license_category = request.query_params.get('license_category')
             lesson = request.query_params.get('lesson')
-            learner_location = request.query_params.get('learner_location')
+            learner_lat = request.query_params.get('learner_lat')
+            learner_long = request.query_params.get('learner_long')
+            near_school = request.query_params.get('near_school')
             price = request.query_params.get('price')
+
+            if near_school and (not learner_lat or not learner_long):
+                return Response({'success': False, 'message': 'Learner latitude and longitude are required!'}, 
+                                status=status.HTTP_400_BAD_REQUEST)
+            
             radius = 2
-            
-            if not learner_location:
-                return Response({'success': False, 'message': 'Learner location is required.'}, status=status.HTTP_400_BAD_REQUEST)
-            # learner_lat = 31.5277
-            # learner_long =74.3278
-            learner_lat, learner_long = get_lat_lon_from_address(learner_location)
-            
-            if not learner_lat or not learner_long:
-                return Response({'success': False, 'message': 'Invalid learner location.'}, status=status.HTTP_404_NOT_FOUND)
+            max_radius = 5
             schools = User.objects.filter(user_type='school')
 
-            nearby_schools = []
-            far_schools = []
-
-            for school in schools:
-                # school_lat =  31.5277
-                # school_long = 74.3278
-                school_lat, school_long = get_lat_lon_from_address(school.address)
-
-                if not school_lat or not school_long:
-                    continue  
-
-                distance = haversine(learner_lat, learner_long, school_lat, school_long)
-
-                courses = school.course_user.all()
-
-                if license_category:
-                    courses = courses.filter(license_category__name__icontains=license_category)
-
-                if lesson:
-                    try:
-                        lesson_number = int(lesson)
-                        courses = courses.filter(Q(lesson_numbers=lesson_number) | Q(lesson_numbers__lte=lesson_number))
-                    except ValueError:
-                        return Response({'success': False, 'message': 'Invalid lesson number format.'}, status=status.HTTP_404_NOT_FOUND)
-
-                if price:
-                    courses = courses.filter(price__lte=float(price))
-                if not courses.exists():
-                    continue
-
-                school_data = {
-                    'school': school,
-                    'courses': courses,
-                    'distance': distance
-                }
-
-                if distance <= radius:
-                    nearby_schools.append(school_data)
-                else:
-                    far_schools.append(school_data)
+            try:
+                learner_lat = float(learner_lat)
+                learner_long = float(learner_long)
+            except (TypeError, ValueError):
+                return Response({'success': False, 'message': 'Invalid latitude or longitude.'}, 
+                                status=status.HTTP_400_BAD_REQUEST)
 
             response_data = {
                 'nearby_schools': [],
                 'far_schools': []
             }
 
-            for school_data in nearby_schools:
-                serializer = SchoolSerializer(
-                    school_data['school'], 
-                    context={'courses': school_data['courses']}
-                )
-                serialized_data = serializer.data
-                serialized_data['distance'] = f"{school_data['distance']:.2f} km"
-                response_data['nearby_schools'].append(serialized_data)
+            def filter_and_serialize_schools(radius_limit):
+                nearby_schools = []
+                far_schools = []
+
+                for school in schools:
+                    school_lat = school.lat
+                    school_long = school.long
+
+                    if not school_lat or not school_long:
+                        continue  
+
+                    distance = haversine(learner_lat, learner_long, school_lat, school_long)
+                    courses = school.course_user.all()
+
+                    if license_category:
+                        courses = courses.filter(license_category__name__icontains=license_category)
+                    
+                    if lesson:
+                        try:
+                            lesson_number = int(lesson)
+                            courses = courses.filter(
+                                Q(lesson_numbers=lesson_number) | Q(lesson_numbers__lte=lesson_number)
+                            )
+                        except ValueError:
+                            return {'success': False, 'message': 'Invalid lesson number format.'}, None
+
+                    if price:
+                        courses = courses.filter(price__lte=float(price))
+                    
+                    if not courses.exists():
+                        continue
+
+                    school_data = {
+                        'school': school,
+                        'courses': courses,
+                        'distance': distance
+                    }
+
+                    if distance <= radius_limit:
+                        nearby_schools.append(school_data)
+                    else:
+                        far_schools.append(school_data)
+                
+                return nearby_schools, far_schools
+
+            while radius <= max_radius:
+                nearby_schools, far_schools = filter_and_serialize_schools(radius)
+                
+                for school_data in nearby_schools:
+                    serializer = SchoolSerializer(
+                        school_data['school'], 
+                        context={'courses': school_data['courses']}
+                    )
+                    serialized_data = serializer.data
+                    serialized_data['distance'] = f"{school_data['distance']:.2f} km"
+                    response_data['nearby_schools'].append(serialized_data)
+                
+                if response_data['nearby_schools']:
+                    break
+
+                radius += 3
 
             for school_data in far_schools:
                 serializer = SchoolSerializer(
@@ -651,7 +669,8 @@ class SearchSchool(APIView):
 
         except Exception as e:
             print("Error=====>", e)
-            return Response({'success': False, 'message': 'Invalid data provided.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': False, 'message': 'An unexpected error occurred.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class SchoolDetail(APIView):

@@ -53,6 +53,21 @@ class User(AbstractBaseUser, PermissionsMixin):
     city = models.ForeignKey('utils_app.City', on_delete=models.SET_NULL, null=True, blank=True)
     social_platform = models.CharField(max_length=255, choices=SOCIAL_PLATFORM_CHOICES, null=True, blank=True)
     user_status = models.CharField(max_length=255,  choices=USER_STATUS_CHOICES, default='pending', null=True, blank=True)
+    lat = models.DecimalField(
+        max_digits=9, 
+        decimal_places=6, 
+        null=True, 
+        blank=True, 
+        help_text="Latitude"
+    )
+    long = models.DecimalField(
+        max_digits=9, 
+        decimal_places=6, 
+        null=True, 
+        blank=True, 
+        help_text="Longitude"
+    )
+
     is_deleted = models.BooleanField(default=False)
     
     USERNAME_FIELD = 'username'
