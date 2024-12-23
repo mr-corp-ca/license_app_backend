@@ -670,3 +670,82 @@ class SchoolDetail(APIView):
         except Exception as e:
             print("Error=====>", e)
             return Response({'success': False, 'message': 'An error occurred while processing the request.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VehicleSelectionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request,id):
+        try:
+            school = User.objects.filter(user_type='school', id=id).first()
+            if not school:
+                return Response({'success': False, 'message': 'School not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            vehicles = Vehicle.objects.filter(user=school, booking_status='free')
+
+            serializer = VehicleDetailSerializer(vehicles, many=True)
+
+            return Response({
+                'success': True,
+                'data': serializer.data,
+                'message': 'Available vehicles fetched successfully.'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error=====>", e)
+            return Response({
+                'success': False,
+                'message': 'An error occurred while fetching vehicles.',
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request, id):
+        try:
+            user = request.user
+            vehicle_id = request.data.get('id')
+
+            if user.user_type != 'learner':
+                return Response({'success': False, 'message': 'Only learners can select vehicles.'}, status=status.HTTP_403_FORBIDDEN)
+
+            school = User.objects.filter(user_type='school', id=id).first()
+            if not school:
+                return Response({'success': False, 'message': 'School not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            vehicle = Vehicle.objects.filter(id=vehicle_id, user=school, booking_status='free').first()
+            if not vehicle:
+                return Response({
+                    'success': False,
+                    'message': 'Vehicle not found, not associated with this school, or already booked.'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            previous_vehicle = Vehicle.objects.filter(user=user).first()
+            if previous_vehicle:
+                return Response({
+                    'success': False,
+                    'message': f'You have already selected a vehicle: {previous_vehicle.name}.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            vehicle.booking_status = 'booked'
+            vehicle.user = user
+            vehicle.save()
+
+            return Response({
+                'success': True,
+                'data': {
+                    'vehicle_id': vehicle.id,
+                    'vehicle_name': vehicle.name,
+                    'vehicle_number': vehicle.vehicle_registration_no,
+                    'license_number': vehicle.license_number,
+                    'school_id': school.id,
+                    'school_name': school.full_name,
+                },
+                'message': 'Vehicle selected successfully.'
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            print("Error=====>", e)
+            return Response({
+                'success': False,
+                'message': 'An error occurred while processing the request.',
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)

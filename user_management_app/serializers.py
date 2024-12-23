@@ -135,7 +135,7 @@ class GetReviewSerializer(serializers.ModelSerializer):
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
-        fields = ['id', 'name', 'price']
+        fields = ['id', 'name', 'price','lesson_numbers','total_course_hour','free_pickup']
 
 class SchoolDetailSerializer(serializers.ModelSerializer):
     courses = serializers.SerializerMethodField()
@@ -169,3 +169,9 @@ class SchoolDetailSerializer(serializers.ModelSerializer):
 
     def get_rating(self, obj):
         return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)
+    
+
+class VehicleDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vehicle
+        fields = ['id', 'name', 'vehicle_registration_no', 'vehicle_model', 'image', 'booking_status','created_at']
