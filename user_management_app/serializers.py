@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle,Package,Service
+from course_management_app.models import Course, Vehicle,Package,Service,Lesson
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
 
@@ -99,11 +99,26 @@ class SchoolSerializer(serializers.ModelSerializer):
     def get_rating(self, obj):
         return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)
 
+class GetLessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['id','title']
 
+class GetServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name']
 class GetCourseSerializer(serializers.ModelSerializer):
+    services = GetServiceSerializer(many=True)
+    lesson = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
-        fields = ['id', 'title', 'price', 'lesson_numbers', 'services', 'refund_policy']
+        fields = ['id', 'title', 'price', 'lesson_numbers', 'services', 'refund_policy','lesson']
+    
+    def get_lesson(self, instance):
+        lesson = Lesson.objects.filter(course=instance)
+        return GetLessonSerializer(lesson, many=True).data
 
 class GetVehicleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -115,7 +130,7 @@ class GetReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ['id', 'user_name', 'rating', 'created_at']
+        fields = ['id', 'user_name', 'rating','feedback']
 
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -137,8 +152,8 @@ class SchoolDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_courses(self, obj):
-        courses = self.context.get('courses', obj.course_user.all())
-        return CourseSerializer(courses, many=True).data
+        courses = obj.course_user.all()
+        return GetCourseSerializer(courses, many=True).data
 
     def get_vehicles(self, obj):
         vehicles = obj.user_vehicle.all()
