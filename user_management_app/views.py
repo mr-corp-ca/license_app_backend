@@ -654,6 +654,7 @@ class LearnerReportAPIVIEW(APIView):
 
 
 
+
 class SchoolDetail(APIView):
     permission_classes = [IsAuthenticated]
 
