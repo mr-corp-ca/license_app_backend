@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.db.models import Avg
+from course_management_app.models import Course, Vehicle,Package,Service
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
 
@@ -68,3 +70,87 @@ class LearnerReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = LearnerReport
         fields = ['id', 'learner', 'instructor', 'reason', 'description']
+
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course  
+        fields = ['id', 'title', 'price', 'lesson_numbers']
+
+
+class VehicleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vehicle
+        fields = ['id', 'name', 'vehicle_model']
+
+
+class SchoolSerializer(serializers.ModelSerializer):
+    courses = serializers.SerializerMethodField()
+    vehicles = VehicleSerializer(many=True, source='user_vehicle.all')
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User 
+        fields = ['id', 'username', 'address', 'logo', 'courses', 'vehicles', 'rating']
+
+    def get_courses(self, obj):
+        courses = self.context.get('courses', obj.course_user.all())
+        return CourseSerializer(courses, many=True).data
+
+    def get_rating(self, obj):
+        return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)
+
+
+class GetCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'price', 'lesson_numbers', 'services', 'refund_policy']
+
+class GetVehicleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vehicle
+        fields = ['id', 'name', 'vehicle_model']
+
+class GetReviewSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name')
+
+    class Meta:
+        model = Review
+        fields = ['id', 'user_name', 'rating', 'created_at']
+
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price']
+
+class SchoolDetailSerializer(serializers.ModelSerializer):
+    courses = serializers.SerializerMethodField()
+    vehicles = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+    plans = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'full_name', 'address', 'logo', 'rating', 
+            'courses', 'vehicles', 'reviews', 'plans'
+        ]
+
+    def get_courses(self, obj):
+        courses = self.context.get('courses', obj.course_user.all())
+        return CourseSerializer(courses, many=True).data
+
+    def get_vehicles(self, obj):
+        vehicles = obj.user_vehicle.all()
+        return GetVehicleSerializer(vehicles, many=True).data
+
+    def get_reviews(self, obj):
+        reviews = obj.review_set.all()
+        return GetReviewSerializer(reviews, many=True).data
+
+    def get_plans(self, obj):
+        plans = obj.package_user.all() 
+        return PlanSerializer(plans, many=True).data
+
+    def get_rating(self, obj):
+        return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)

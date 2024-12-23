@@ -10,6 +10,7 @@ from rest_framework import status
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from .threads import *
+from utils_app.services import *
 from user_management_app.constants import sendSMS
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
@@ -563,18 +564,38 @@ class LearnerReportAPIVIEW(APIView):
 
 class SearchSchool(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         try:
             license_category = request.query_params.get('license_category')
-            lesson = request.query_params.get('lesson')  
+            lesson = request.query_params.get('lesson')
+            learner_location = request.query_params.get('learner_location')
             price = request.query_params.get('price')
-
+            radius = 2
+            
+            if not learner_location:
+                return Response({'success': False, 'message': 'Learner location is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            # learner_lat = 31.5277
+            # learner_long =74.3278
+            learner_lat, learner_long = get_lat_lon_from_address(learner_location)
+            
+            if not learner_lat or not learner_long:
+                return Response({'success': False, 'message': 'Invalid learner location.'}, status=status.HTTP_404_NOT_FOUND)
             schools = User.objects.filter(user_type='school')
 
-            filtered_schools = []
+            nearby_schools = []
+            far_schools = []
 
             for school in schools:
+                # school_lat =  31.5277
+                # school_long = 74.3278
+                school_lat, school_long = get_lat_lon_from_address(school.address)
+
+                if not school_lat or not school_long:
+                    continue  
+
+                distance = haversine(learner_lat, learner_long, school_lat, school_long)
+
                 courses = school.course_user.all()
 
                 if license_category:
@@ -585,47 +606,66 @@ class SearchSchool(APIView):
                         lesson_number = int(lesson)
                         courses = courses.filter(Q(lesson_numbers=lesson_number) | Q(lesson_numbers__lte=lesson_number))
                     except ValueError:
-                        return Response({'success': False, 'message': 'Invalid lesson number format.'}, status=status.HTTP_400_BAD_REQUEST)
+                        return Response({'success': False, 'message': 'Invalid lesson number format.'}, status=status.HTTP_404_NOT_FOUND)
 
                 if price:
                     courses = courses.filter(price__lte=float(price))
-
                 if not courses.exists():
-                    continue  
+                    continue
 
                 school_data = {
-                    "id": school.id,
-                    "name": school.full_name,
-                    "address": school.address,
-                    "logo": school.logo.url if school.logo else None,
-                    "courses": [
-                        {
-                            "id": course.id,
-                            "title": course.title,
-                            "price": course.price,
-                            "lesson_numbers": course.lesson_numbers,
-                        }
-                        for course in courses
-                    ],
-                    "vehicles": [
-                        {
-                            "id": vehicle.id,
-                            "name": vehicle.name,
-                            "vehicle_model": vehicle.vehicle_model,
-                        }
-                        for vehicle in school.user_vehicle.all()
-                    ],
-                    "rating": school.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None),
+                    'school': school,
+                    'courses': courses,
+                    'distance': distance
                 }
-                filtered_schools.append(school_data)
 
-            sorted_schools = sorted(filtered_schools, key=lambda x: x['name'])
+                if distance <= radius:
+                    nearby_schools.append(school_data)
+                else:
+                    far_schools.append(school_data)
 
-            if not sorted_schools:
-                return Response({'success': False, 'message': 'No schools found matching the criteria.'}, status=status.HTTP_404_NOT_FOUND)
+            response_data = {
+                'nearby_schools': [],
+                'far_schools': []
+            }
 
-            return Response({'success': True, 'data': sorted_schools}, status=status.HTTP_200_OK)
+            for school_data in nearby_schools:
+                serializer = SchoolSerializer(
+                    school_data['school'], 
+                    context={'courses': school_data['courses']}
+                )
+                serialized_data = serializer.data
+                serialized_data['distance'] = f"{school_data['distance']:.2f} km"
+                response_data['nearby_schools'].append(serialized_data)
+
+            for school_data in far_schools:
+                serializer = SchoolSerializer(
+                    school_data['school'], 
+                    context={'courses': school_data['courses']}
+                )
+                serialized_data = serializer.data
+                serialized_data['distance'] = f"{school_data['distance']:.2f} km"
+                response_data['far_schools'].append(serialized_data)
+
+            return Response({'success': True, 'data': response_data}, status=status.HTTP_200_OK)
 
         except Exception as e:
             print("Error=====>", e)
             return Response({'success': False, 'message': 'Invalid data provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SchoolDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            school = User.objects.filter(user_type='school', id=id).first()
+            if not school:
+                return Response({'success': False, 'message': 'School not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = SchoolDetailSerializer(school)
+            return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("Error=====>", e)
+            return Response({'success': False, 'message': 'An error occurred while processing the request.'}, status=status.HTTP_400_BAD_REQUEST)
