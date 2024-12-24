@@ -5,7 +5,7 @@ from utils_app.models import BaseModelWithCreatedInfo
 class MonthlySchedule(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='monthlyschedule_user')
     vehicle = models.ForeignKey('course_management_app.Vehicle', on_delete=models.CASCADE, related_name='monthlyschedule_vehicle')
-
+    location =  models.JSONField()
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()

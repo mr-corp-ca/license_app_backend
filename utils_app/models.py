@@ -62,7 +62,7 @@ class Radius(BaseModelWithCreatedInfo):
     main_longitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
 
     def __str__(self):
-        return f"Radius for Instructor {self.user.id}"
+        return f"Radius for School {self.user.id}"
 
 
 class Location(BaseModelWithCreatedInfo):
@@ -72,5 +72,5 @@ class Location(BaseModelWithCreatedInfo):
     longitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
 
     def __str__(self):
-        return f"Instructor other Locations - {self.location_name}"
+        return f"Locations - {self.location_name}"
     
