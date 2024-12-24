@@ -21,9 +21,9 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ObjectDoesNotExist
 import stripe
-from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.measure import D
+# from django.contrib.gis.geos import Point
+# from django.contrib.gis.db.models.functions import Distance
+# from django.contrib.gis.measure import D
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -565,93 +565,92 @@ class LearnerReportAPIVIEW(APIView):
             return Response({'success': False, 'message': 'Invalid data provided.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SearchSchool(APIView):
-    permission_classes = [IsAuthenticated]
+# class SearchSchool(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         response_data = {'data': []}
+#         try:
+#             license_category = request.query_params.get('license_category')
+#             lesson = request.query_params.get('lesson')
+
+#             learner_lat = request.query_params.get('learner_lat')
+#             learner_long = request.query_params.get('learner_long')
+#             near_school = request.query_params.get('near_school')
+#             min_price = request.query_params.get('min_price')
+#             max_price = request.query_params.get('max_price')
+
+#             # Search 
+#             search_value = request.query_params.get('search_value')
 
 
-    def get(self, request):
-        response_data = {'data': []}
-        try:
-            license_category = request.query_params.get('license_category')
-            lesson = request.query_params.get('lesson')
+#             schools = User.objects.filter(user_type='school')
 
-            learner_lat = request.query_params.get('learner_lat')
-            learner_long = request.query_params.get('learner_long')
-            near_school = request.query_params.get('near_school')
-            min_price = request.query_params.get('min_price')
-            max_price = request.query_params.get('max_price')
+#             if near_school:
+#                 if not learner_lat or not learner_long:
+#                     return Response({'success': False, 'message': 'Learner latitude and longitude are required!'},
+#                                     status=status.HTTP_400_BAD_REQUEST)
 
-            # Search 
-            search_value = request.query_params.get('search_value')
+#                 try:
+#                     learner_point = Point(float(learner_long), float(learner_lat), srid=4326)
+#                 except (TypeError, ValueError):
+#                     return Response({'success': False, 'message': 'Invalid latitude or longitude.'},
+#                                     status=status.HTTP_400_BAD_REQUEST)
 
+#                 radius = 2
+#                 max_radius = 5
 
-            schools = User.objects.filter(user_type='school')
+#                 while radius <= max_radius:
+#                     nearby_schools = (
+#                         schools.annotate(distance=Distance('location', learner_point))
+#                                .filter(distance__lte=D(km=radius))
+#                                .distinct()
+#                     )
 
-            if near_school:
-                if not learner_lat or not learner_long:
-                    return Response({'success': False, 'message': 'Learner latitude and longitude are required!'},
-                                    status=status.HTTP_400_BAD_REQUEST)
+#                     if nearby_schools.exists():
+#                         schools = nearby_schools
+#                         break
 
-                try:
-                    learner_point = Point(float(learner_long), float(learner_lat), srid=4326)
-                except (TypeError, ValueError):
-                    return Response({'success': False, 'message': 'Invalid latitude or longitude.'},
-                                    status=status.HTTP_400_BAD_REQUEST)
+#                     radius += 3
 
-                radius = 2
-                max_radius = 5
+#             if license_category:
+#                 schools = schools.filter(course_user__license_category__name__icontains=license_category)
 
-                while radius <= max_radius:
-                    nearby_schools = (
-                        schools.annotate(distance=Distance('location', learner_point))
-                               .filter(distance__lte=D(km=radius))
-                               .distinct()
-                    )
+#             if lesson:
+#                 lesson_number = int(lesson)
+#                 schools = schools.filter(course_user__lesson_numbers__lte=lesson_number)
 
-                    if nearby_schools.exists():
-                        schools = nearby_schools
-                        break
+#             if min_price:
+#                 schools = schools.filter(course_user__price__gte=float(min_price))
 
-                    radius += 3
+#             if max_price:
+#                 schools = schools.filter(course_user__price__lte=float(max_price))
 
-            if license_category:
-                schools = schools.filter(course_user__license_category__name__icontains=license_category)
+#             if search_value:
+#                 schools = schools.filter(
+#                     Q(course_user__lesson_numbers__lte=int(search_value)) |
+#                     Q(course_user__license_category__name__icontains=search_value) |
+#                     Q(full_name__icontains=search_value) |
+#                     Q(address__icontains=search_value) |
+#                     Q(province__name__icontains=search_value) |
+#                     Q(city__name__icontains=search_value) | 
+#                     Q(course_user__title__icontains=search_value) | 
+#                     Q(course_user__description__icontains=search_value) | 
+#                     Q(course_user__services__name__icontains=search_value)
+#                 )
 
-            if lesson:
-                lesson_number = int(lesson)
-                schools = schools.filter(course_user__lesson_numbers__lte=lesson_number)
+#             for school in schools:
+#                 serializer = SchoolSerializer(school, context={'courses': school.course_user.all()})
+#                 serialized_data = serializer.data
+#                 if hasattr(school, 'distance'):
+#                     serialized_data['distance'] = f"{school.distance.km:.2f} km"
+#                 response_data['data'].append(serialized_data)
 
-            if min_price:
-                schools = schools.filter(course_user__price__gte=float(min_price))
+#             return Response({'success': True, 'response': {"data": response_data}}, status=status.HTTP_200_OK)
 
-            if max_price:
-                schools = schools.filter(course_user__price__lte=float(max_price))
-
-            if search_value:
-                schools = schools.filter(
-                    Q(course_user__lesson_numbers__lte=int(search_value)) |
-                    Q(course_user__license_category__name__icontains=search_value) |
-                    Q(full_name__icontains=search_value) |
-                    Q(address__icontains=search_value) |
-                    Q(province__name__icontains=search_value) |
-                    Q(city__name__icontains=search_value) | 
-                    Q(course_user__title__icontains=search_value) | 
-                    Q(course_user__description__icontains=search_value) | 
-                    Q(course_user__services__name__icontains=search_value)
-                )
-
-            for school in schools:
-                serializer = SchoolSerializer(school, context={'courses': school.course_user.all()})
-                serialized_data = serializer.data
-                if hasattr(school, 'distance'):
-                    serialized_data['distance'] = f"{school.distance.km:.2f} km"
-                response_data['data'].append(serialized_data)
-
-            return Response({'success': True, 'response': {"data": response_data}}, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response({'success': False, 'response': {"message": str(e)}},
-                            status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({'success': False, 'response': {"message": str(e)}},
+#                             status=status.HTTP_400_BAD_REQUEST)
 
 
 

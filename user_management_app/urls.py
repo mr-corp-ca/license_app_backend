@@ -16,7 +16,7 @@ urlpatterns = [
     path('MobileNumberVerify/', MobileNumberVerifyAPIView.as_view()),
     path('RatingView/', RatingView.as_view()),
     path('UserNotification/', UserNotificationAPIView.as_view()),
-    path('SearchSchool/',SearchSchool.as_view()),
+    # path('SearchSchool/',SearchSchool.as_view()),
     path('schoolDetail/<int:id>/',SchoolDetail.as_view()),
     path('schools/<int:id>/vehicles/', VehicleSelectionView.as_view(), name='vehicle-selection'),
 
