@@ -2,10 +2,12 @@ import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from course_management_app.models import  Vehicle
-from utils_app.models import  Location, Radius
+from course_management_app.models import Vehicle
+from utils_app.models import Location
+from user_management_app.models import Wallet,TransactionHistroy
+from datetime import datetime, timedelta
 from utils_app.serializers import LocationSerializer
-from .models import MonthlySchedule
+from .models import MonthlySchedule,LearnerBookingSchedule
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from .serializers import MonthlyScheduleSerializer
@@ -41,103 +43,107 @@ class LearnerMonthlyScheduleView(APIView):
 
     def get(self, request):
         user = request.user
-        schedules = MonthlySchedule.objects.filter(user=user).order_by('date')
-        schedule_serializer = MonthlyScheduleSerializer(schedules, many=True)
+        vehicle_id = request.query_params.get('vehicle_id')
+        current_location_name = request.query_params.get('current_location')
 
-        return Response({
-            'success': True,
-            'schedules': schedule_serializer.data
-        }, status=status.HTTP_200_OK)
-
-    @transaction.atomic
-    def post(self, request):
-        """Create or update a schedule for the learner."""
-        data = request.data
-        user = request.user
-
-        vehicle_id = data.get('vehicle_id')
         vehicle = Vehicle.objects.filter(id=vehicle_id).first()
         if not vehicle:
-            return Response({'success': False, 'message': 'Invalid or unassigned vehicle.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': False, 'message': 'Vehicle ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        current_location = data.get('current_location') 
+        try:
+            monthly_schedules = MonthlySchedule.objects.filter(vehicle_id=vehicle_id)
+            booked_slots = LearnerBookingSchedule.objects.filter(vehicle_id=vehicle_id).values_list("slot", flat=True)
 
-        schedules = data.get('schedules', [])
-        for schedule_data in schedules:
-            date = schedule_data.get('date')
-            start_time = schedule_data.get('start_time')
-            end_time = schedule_data.get('end_time')
-            launch_break_start = schedule_data.get('launch_break_start')
-            launch_break_end = schedule_data.get('launch_break_end')
-            extra_space_start = schedule_data.get('extra_space_start')
-            extra_space_end = schedule_data.get('extra_space_end')
+            # Calculate free slots
+            available_slots = []
+            for schedule in monthly_schedules:
+                start_time = schedule.start_time
+                end_time = schedule.end_time
+                lunch_break_start = schedule.launch_break_start
+                lunch_break_end = schedule.launch_break_end
 
-            if not date or not start_time or not end_time:
-                return Response({
-                    'success': False,
-                    'message': 'Date, start_time, and end_time are required for scheduling.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                current_time = (datetime.combine(datetime.min, start_time) + timedelta(minutes=30)).time()
+                while current_time < end_time:
+                    if (
+                        current_time not in booked_slots and
+                        (not lunch_break_start or current_time < lunch_break_start or current_time >= lunch_break_end) and
+                        current_time != start_time and current_time != end_time
+                    ):
+                        available_slots.append(current_time.strftime("%H:%M"))
+                    current_time = (datetime.combine(datetime.min, current_time) + timedelta(minutes=30)).time()
 
-            locations = []
-            for location_data in schedule_data.get('locations', []): 
-                location_name = location_data.get('location_name')
-                latitude = location_data.get('latitude')
-                longitude = location_data.get('longitude')
+            locations = Location.objects.filter(radius__user=vehicle.user)
 
-                location = {
-                    'location_name': location_name,
-                    'latitude': latitude,
-                    'longitude': longitude
+            serialized_locations = LocationSerializer(locations, many=True).data
+
+            return Response({
+                'success': True,
+                'available_slots': available_slots,
+                'locations': serialized_locations,
+                'current_location_option': {
+                    'location_name': current_location_name,
+                    'additional_charge': 10.00
                 }
+            }, status=status.HTTP_200_OK)
 
-                if current_location:
-                    if self.is_within_radius(current_location, location):
-                        pass # Add $10 charge for location match
+        except MonthlySchedule.DoesNotExist:
+            return Response({'success': False, 'message': 'No schedule found for the given vehicle.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                locations.append(location)
+    def post(self, request):
+        try:
+            user = request.user
+            data = request.data
+            selected_location = data.get('selected_location')
+            current_location = data.get('current_location', False)
 
-            if not locations:
-                return Response({
-                    'success': False,
-                    'message': 'No valid locations found.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if not selected_location:
+                return Response({'success': False, 'message': 'Please select a location.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            MonthlySchedule.objects.update_or_create(
+            if current_location:
+
+                current_location_latitude = data.get('latitude')
+                current_location_longitude = data.get('longitude')
+
+                if not current_location_latitude or not current_location_longitude:
+                    return Response({'success': False, 'message': 'Latitude and longitude are required for current location.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                wallet = Wallet.objects.get(user=user)
+                if wallet.balance < 10.00:
+                    return Response({'success': False, 'message': 'Insufficient wallet balance.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                wallet.balance -= 10.00
+                wallet.save()
+
+                TransactionHistroy.objects.create(
+                    wallet=wallet,
+                    amount=10.00,
+                    transaction_type="DEBIT"
+                )
+            else:
+
+                location = Location.objects.filter(id=selected_location).first()
+                selected_location = location.location_name
+                current_location_latitude = location.latitude
+                current_location_longitude = location.longitude
+
+            learner_booking = LearnerBookingSchedule.objects.create(
                 user=user,
-                date=date,
-                defaults={
-                    'vehicle': vehicle,
-                    'location': locations,  
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'launch_break_start': launch_break_start,
-                    'launch_break_end': launch_break_end,
-                    'extra_space_start': extra_space_start,
-                    'extra_space_end': extra_space_end,
-                }
+                vehicle=data.get('vehicle_id'),
+                location=selected_location,
+                latitude=current_location_latitude,
+                longitude=current_location_longitude,
+                lesson_slection=data.get('lesson_slection'),
+                date=data.get('date'),
+                slot=data.get('slot'),
+                road_test=data.get('road_test', False)
             )
 
-        return Response({'success': True, 'message': 'Schedule updated successfully.'}, status=status.HTTP_200_OK)
 
-    def delete(self, request):
-        """Delete a schedule by date."""
-        date = request.data.get('date')
-        if not date:
-            return Response({'success': False, 'message': 'Date is required to delete a schedule.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': True, 'message': 'Location and time slot successfully booked.'}, status=status.HTTP_201_CREATED)
 
-        schedule = MonthlySchedule.objects.filter(user=request.user, date=date).first()
-        if not schedule:
-            return Response({'success': False, 'message': 'Schedule not found for the given date.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        schedule.delete()
-        return Response({'success': True, 'message': 'Schedule deleted successfully.'}, status=status.HTTP_200_OK)
-
-    def is_within_radius(self, current_location, location):
-        """
-        Check if the current location is within a certain radius of the provided location.
-        For simplicity, let's assume a dummy condition here.
-        """
-        # Dummy logic: checking if the locations are the same
-        if current_location['latitude'] == location['latitude'] and current_location['longitude'] == location['longitude']:
-            return True
-        return False
+        

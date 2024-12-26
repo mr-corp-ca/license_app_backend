@@ -147,8 +147,10 @@ class UserNotification(BaseModelWithCreatedInfo):
 
 
 class SchoolSetting(BaseModelWithCreatedInfo):
-    user =  models.OneToOneField(User,on_delete=models.CASCADE,related_name='School_user')
-    instructor = models.ManyToManyField(User,related_name='School_instructor')
+    user =  models.OneToOneField(User,on_delete=models.CASCADE, related_name='School_user')
+    instructor = models.ManyToManyField(User, related_name='School_instructor', blank=True)
+    learner = models.ManyToManyField(User, related_name='School_learner', blank=True)
+
 class LearnerReport(BaseModelWithCreatedInfo):
     learner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_learner')
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_instructor')
