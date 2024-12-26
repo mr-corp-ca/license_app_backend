@@ -748,3 +748,13 @@ class VehicleSelectionView(APIView):
                 'message': 'An error occurred while processing the request.',
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class InstructorDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        school_setting, created = SchoolSetting.objects.get_or_create(user=user)
+        total_students = school_setting.learner.all().count()
