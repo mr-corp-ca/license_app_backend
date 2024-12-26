@@ -19,8 +19,9 @@ ALLOWED_HOSTS = [
                 'localhost',
                 '127.0.0.1',
                 '192.168.10.22',
+                '192.168.10.95',
+               ' driving-licence-admin.vercel.app'
                 'api.thegearup.ca',
-                '192.168.10.95'
                  ]
 
 INSTALLED_APPS = [
