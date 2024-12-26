@@ -151,6 +151,9 @@ class SchoolSetting(BaseModelWithCreatedInfo):
     instructor = models.ManyToManyField(User, related_name='School_instructor', blank=True)
     learner = models.ManyToManyField(User, related_name='School_learner', blank=True)
 
+    def __str__(self):
+        return str(self.user)
+    
 class LearnerReport(BaseModelWithCreatedInfo):
     learner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_learner')
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_instructor')
