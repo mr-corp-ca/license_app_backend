@@ -817,3 +817,4 @@ class InstructorDashboardAPIView(APIView):
         total_students = school_setting.learner.all().count()
         total_courses = Course.objects.filter(user=user).count()
         total_vehicles = Vehicle.objects.filter(user=user).count()
+
