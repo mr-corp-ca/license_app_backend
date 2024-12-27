@@ -41,7 +41,7 @@ class Vehicle(BaseModelWithCreatedInfo):
     instructor = models.ForeignKey('user_management_app.User',on_delete=models.CASCADE, null=True, blank=True, related_name='instructor_vehicle')
 
     name = models.CharField(max_length=255, verbose_name="Vehicle Name")
-    trainer_name = models.CharField(max_length=255, verbose_name="Trainer Name")
+    trainer_name = models.CharField(max_length=255, null=True, blank=True ,verbose_name="Trainer Name")
     vehicle_registration_no = models.CharField(max_length=100, unique=True, verbose_name="Registration Number")
     license_number = models.CharField(max_length=100, unique=True, verbose_name="License Number")
     vehicle_model = models.CharField(max_length=100, verbose_name="Vehicle Model")
