@@ -22,6 +22,7 @@ ALLOWED_HOSTS = [
                 '192.168.10.95',
                ' driving-licence-admin.vercel.app',
                 'api.thegearup.ca',
+                'https://thegearup.ca'
                  ]
 
 INSTALLED_APPS = [
@@ -47,7 +48,8 @@ INSTALLED_APPS = [
 
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
-    'https://driving-licence-admin.vercel.app'
+    'https://driving-licence-admin.vercel.app',
+   'https://thegearup.ca'
 ]
 
 CSRF_TRUSTED_ORIGINS = [
