@@ -54,9 +54,8 @@ class LearnerMonthlyScheduleView(APIView):
 
             try:
                 monthly_schedules = MonthlySchedule.objects.filter(vehicle_id=vehicle_id)
-                # Get the booked slots and convert them to time objects
                 booked_slots = LearnerBookingSchedule.objects.filter(vehicle_id=vehicle_id).values_list("slot", flat=True)
-                booked_slots = [slot.strftime("%H:%M") for slot in booked_slots]  # Convert to string format for comparison
+                booked_slots = [slot.strftime("%H:%M") for slot in booked_slots]
 
                 available_slots = []
                 for schedule in monthly_schedules:
@@ -65,7 +64,6 @@ class LearnerMonthlyScheduleView(APIView):
                     lunch_break_start = schedule.launch_break_start
                     lunch_break_end = schedule.launch_break_end
 
-                    # Compare times correctly
                     if start_time.strftime("%H:%M") not in booked_slots and \
                         (not lunch_break_start or start_time < lunch_break_start or start_time >= lunch_break_end) and \
                         start_time != end_time:
@@ -89,6 +87,7 @@ class LearnerMonthlyScheduleView(APIView):
             except Exception as e:
                 return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+ 
     def post(self, request):
         try:
             user = request.user
