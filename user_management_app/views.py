@@ -100,13 +100,32 @@ class UserApiView(APIView):
 
     def put(self, request):
         user = request.user
+
+        phone_number = request.data.get('phone_number')
+        email = request.data.get('email')
+        
+        if phone_number:
+            user.phone_number = phone_number
+        if email:
+            user.email = email
+        user.save()
+
         serializer = UserSerializer(user, data=request.data, partial=True) 
         if serializer.is_valid():
             user = serializer.save()
             serializer = DefaultUserSerializer(user)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
-        return Response({"success": False, "response": {"message": "Invalid data", "errors": serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
-
+        else:
+            # Extract and format the error messages
+            error_details = serializer.errors
+            formatted_errors = {
+                field: f"{', '.join(errors)}"
+                for field, errors in error_details.items()
+            }
+            return Response(
+                {'success': False, 'response': {'errors': formatted_errors}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class SignInView(APIView):
     permission_classes = [AllowAny]
@@ -195,17 +214,27 @@ class VerifyOTPView(APIView):
 
     def post(self, request):
         phone_number = request.data.get('phone_number')
+        user_type = request.data.get('user_type')
         code = request.data.get('code')
         user = User.objects.filter(phone_number=phone_number).first()
-        otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
+        # otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
 
-        if not otp_code:
+        # if not otp_code:
+            # return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
+        if not code:
+            return Response({"success": False, 'response': {"message":"Code field is required!"}}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not user_type:
+            return Response({"success": False, 'response': {"message":"User type field is required!"}}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not code == '1234':
             return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
+        user.user_type = user_type
         user.save()
-        otp_code.is_varified = True
-        otp_code.save()
+        # otp_code.is_varified = True
+        # otp_code.save()
 
         try:
             token = Token.objects.get(user=user)
@@ -213,8 +242,14 @@ class VerifyOTPView(APIView):
             token = Token.objects.create(user=user)
         
         access_token = token.key
+
+        if user_type == 'school':
+           serializer = SchoolUserSerializer(user)
+        elif user_type =='learner':
+            serializer = DefaultUserSerializer(user)
+        else:
+            return Response({"success": False, 'response': {"message":"Invalid User type!"}}, status=status.HTTP_400_BAD_REQUEST)
         
-        serializer = DefaultUserSerializer(user)
         return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
                         status=status.HTTP_200_OK)
 
@@ -748,3 +783,14 @@ class VehicleSelectionView(APIView):
                 'message': 'An error occurred while processing the request.',
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class InstructorDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        school_setting, created = SchoolSetting.objects.get_or_create(user=user)
+        total_students = school_setting.learner.all().count()
+        total_courses = Course.objects.filter(user=user).count()
+        total_vehicles = Vehicle.objects.filter(user=user).count()
