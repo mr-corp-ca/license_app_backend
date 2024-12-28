@@ -23,10 +23,10 @@ class CourseApiView(APIView):
     def post(self, request):
         user = request.user
         request_data = request.data
-        services_list = request_data.get('services')
-        license_category_list = request_data.get('license_category')
+        services_list = request.data.get('services', [])
+        license_category_list = request.data.get('license_category', [])
         lesson_numbers = request_data.get('lesson_numbers')
-        lessons = request_data.get('lessons')
+        lessons = request.data.get('lessons', [])
 
         if type(services_list) == str:
             services_list = json.loads(services_list) 
@@ -42,7 +42,7 @@ class CourseApiView(APIView):
         except:
             pass
         
-        LogsModel.objects.create(json_data=f'Type......................data...........{request.data}')
+        LogsModel.objects.create(json_data=f'Type......................data...........type{type(lessons)}........{lessons}.........license_category_list   {type(license_category_list)}.........{license_category_list}')
 
         lesson_count = len(lessons)
         if lesson_numbers != lesson_count:
