@@ -1,5 +1,5 @@
 from django.contrib import admin
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage
 
 # Register your models here.
 
@@ -71,3 +71,11 @@ class SelectedSubscriptionPackagePalnAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'user__email', 'package_plan__package_plan')
     ordering = ('-expired', '-created_at',)
     list_filter = ('expired', 'package_plan__package_plan')
+
+
+
+@admin.register(LearnerSelectedPackage)
+class LearnerSelectedPackageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'package', 'learner_selected_package', 'start_date', 'created_at')
+    search_fields = ('user__full_name', 'package__name')
+    ordering = ('-created_at',)
