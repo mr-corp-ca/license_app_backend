@@ -22,7 +22,7 @@ class Course(BaseModelWithCreatedInfo):
     price = models.FloatField(default=0.0)
     lesson_numbers = models.PositiveIntegerField()
     refund_policy = models.TextField(blank=True, null=True)
-    course_cover_image = models.ImageField(upload_to='course_images/')
+    course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
 
     def __str__(self):
         return self.title
