@@ -19,22 +19,26 @@ class CourseApiView(APIView):
     def post(self, request):
         user = request.user
         request_data = request.data
+        services_list = request.data.get('services', [])
+        license_category_list = request.data.get('license_category', [])
+        lesson_numbers = request_data.get('lesson_numbers')
+        lessons = request.data.get('lessons', [])
+
         lesson_numbers = int(request_data.get('lesson_numbers', 0))  # Ensure integer
         services_list = json.loads(services_list) if isinstance(services_list, str) else services_list
         license_category_list = json.loads(license_category_list) if isinstance(license_category_list, str) else license_category_list
         lessons = json.loads(lessons) if isinstance(lessons, str) else lessons
 
-    
         try:
             request.data._mutable = True
         except:
             pass
         
         data = deepcopy(request.data)
-     
+                
         LogsModel.objects.create(
             json_data=(
-                f"00000000 {data}"
+                f"00000000        {data}"
             )
         )
         LogsModel.objects.create(
