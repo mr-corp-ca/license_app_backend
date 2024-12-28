@@ -111,3 +111,7 @@ class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='subscription_user')
     package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
     expired = models.DateTimeField(verbose_name='Package Expired')
+
+
+class LogsModel(BaseModelWithCreatedInfo):
+    json_data = models.TextField()

@@ -100,13 +100,32 @@ class UserApiView(APIView):
 
     def put(self, request):
         user = request.user
+
+        phone_number = request.data.get('phone_number')
+        email = request.data.get('email')
+        
+        if phone_number:
+            user.phone_number = phone_number
+        if email:
+            user.email = email
+        user.save()
+
         serializer = UserSerializer(user, data=request.data, partial=True) 
         if serializer.is_valid():
             user = serializer.save()
             serializer = DefaultUserSerializer(user)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
-        return Response({"success": False, "response": {"message": "Invalid data", "errors": serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
-
+        else:
+            # Extract and format the error messages
+            error_details = serializer.errors
+            formatted_errors = {
+                field: f"{', '.join(errors)}"
+                for field, errors in error_details.items()
+            }
+            return Response(
+                {'success': False, 'response': {'errors': formatted_errors}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class SignInView(APIView):
     permission_classes = [AllowAny]
@@ -223,10 +242,14 @@ class VerifyOTPView(APIView):
             token = Token.objects.create(user=user)
         
         access_token = token.key
+
         if user_type == 'school':
            serializer = SchoolUserSerializer(user)
         elif user_type =='learner':
             serializer = DefaultUserSerializer(user)
+        else:
+            return Response({"success": False, 'response': {"message":"Invalid User type!"}}, status=status.HTTP_400_BAD_REQUEST)
+        
         return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
                         status=status.HTTP_200_OK)
 
@@ -767,6 +790,7 @@ class InstructorDashboardAPIView(APIView):
 
     def get(self, request):
         user = request.user
-
         school_setting, created = SchoolSetting.objects.get_or_create(user=user)
         total_students = school_setting.learner.all().count()
+        total_courses = Course.objects.filter(user=user).count()
+        total_vehicles = Vehicle.objects.filter(user=user).count()
