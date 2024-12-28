@@ -131,3 +131,6 @@ class CourseRating(BaseModelWithCreatedInfo):
     package = models.ForeignKey(Package, on_delete=models.CASCADE)
     learner_selected_package = models.PositiveIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
+
+class LogsModel(BaseModelWithCreatedInfo):
+    json_data = models.TextField()
