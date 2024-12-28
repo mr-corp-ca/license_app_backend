@@ -35,6 +35,25 @@ class DefaultUserSerializer(serializers.ModelSerializer):
             return ProvinceSerializer(instance.province).data
         else:
             return None
+class SchoolUserSerializer(serializers.ModelSerializer):
+    city = serializers.SerializerMethodField()
+    province = serializers.SerializerMethodField()
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name',
+                  'phone_number', 'province', 'city']
+
+    def get_city(self, instance):
+        if instance.city:
+            return CitySerializer(instance.city).data
+        else:
+            return None
+        
+    def get_province(self, instance):
+        if instance.province:
+            return ProvinceSerializer(instance.province).data
+        else:
+            return None
         
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:

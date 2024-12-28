@@ -195,6 +195,7 @@ class VerifyOTPView(APIView):
 
     def post(self, request):
         phone_number = request.data.get('phone_number')
+        user_type = request.data.get('user_type')
         code = request.data.get('code')
         user = User.objects.filter(phone_number=phone_number).first()
         # otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
@@ -204,10 +205,14 @@ class VerifyOTPView(APIView):
         if not code:
             return Response({"success": False, 'response': {"message":"Code field is required!"}}, status=status.HTTP_400_BAD_REQUEST)
         
+        if not user_type:
+            return Response({"success": False, 'response': {"message":"User type field is required!"}}, status=status.HTTP_400_BAD_REQUEST)
+        
         if not code == '1234':
             return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
+        user.user_type = user_type
         user.save()
         # otp_code.is_varified = True
         # otp_code.save()
@@ -218,8 +223,10 @@ class VerifyOTPView(APIView):
             token = Token.objects.create(user=user)
         
         access_token = token.key
-        
-        serializer = DefaultUserSerializer(user)
+        if user_type == 'school':
+           serializer = SchoolUserSerializer(user)
+        elif user_type =='learner':
+            serializer = DefaultUserSerializer(user)
         return Response({'success': True, 'response': {'data': serializer.data, 'access_token': access_token}},
                         status=status.HTTP_200_OK)
 
