@@ -90,4 +90,4 @@ class CertificateSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['user', 'name', 'trainer_name', 'vehicle_registration_no', 'license_number', 'vehicle_model', 'image','booking_status']
+        fields = ['user', 'name', 'vehicle_registration_no', 'license_number', 'vehicle_model', 'image','booking_status']
