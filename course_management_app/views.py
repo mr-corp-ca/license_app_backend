@@ -36,7 +36,7 @@ class CourseApiView(APIView):
         except:
             pass
         
-        LogsModel.objects.create(json_data=f'Type..........{type(lessons)}.............data...........{lessons}')
+        LogsModel.objects.create(json_data=f'Type......................data...........{request.data}')
 
         lesson_count = len(lessons)
         if lesson_numbers != lesson_count:
