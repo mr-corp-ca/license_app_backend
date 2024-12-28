@@ -60,6 +60,8 @@ class CourseApiView(APIView):
                     course.services.add(service)
             if lessons:
                 for lesson in lessons:
+                    LogsModel.objects.create(json_data=f'Type..........{type(lessons)}.............data...........{lessons}..............single object {lesson}')
+
                     Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
             serializer = GETCourseSerializer(course)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
