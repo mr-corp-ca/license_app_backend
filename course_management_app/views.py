@@ -15,6 +15,8 @@ from course_management_app.pagination import StandardResultSetPagination
 from rest_framework import filters
 import threading
 import json
+from copy import deepcopy
+
 # Create your views here.
 
 class CourseApiView(APIView):
@@ -23,29 +25,22 @@ class CourseApiView(APIView):
     def post(self, request):
         user = request.user
         request_data = request.data
-        services_list = request.data.get('services', [])
-        license_category_list = request.data.get('license_category', [])
-        lesson_numbers = request_data.get('lesson_numbers')
-        lessons = request.data.get('lessons', [])
+        lesson_numbers = int(request_data.get('lesson_numbers', 0))  # Ensure integer
+        services_list = json.loads(services_list) if isinstance(services_list, str) else services_list
+        license_category_list = json.loads(license_category_list) if isinstance(license_category_list, str) else license_category_list
+        lessons = json.loads(lessons) if isinstance(lessons, str) else lessons
 
-        if type(services_list) == str:
-            services_list = json.loads(services_list) 
-
-        if type(license_category_list) == str:
-            license_category_list = json.loads(license_category_list) 
-
-        if type(lessons) == str:
-            lessons = json.loads(lessons)
-
+    
         try:
             request.data._mutable = True
         except:
             pass
         
-                
+        data = deepcopy(request.data)
+     
         LogsModel.objects.create(
             json_data=(
-                f"00000000        {request.data}"
+                f"00000000 {data}"
             )
         )
         LogsModel.objects.create(
@@ -70,7 +65,7 @@ class CourseApiView(APIView):
                 status=status.HTTP_400_BAD_REQUEST)
 
         request.data['user'] = user.id
-        serializer = CourseSerializer(data=request.data)
+        serializer = CourseSerializer(data=data)
         if serializer.is_valid():
             course = serializer.save()
             if license_category_list:
