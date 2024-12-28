@@ -197,15 +197,20 @@ class VerifyOTPView(APIView):
         phone_number = request.data.get('phone_number')
         code = request.data.get('code')
         user = User.objects.filter(phone_number=phone_number).first()
-        otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
+        # otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
 
-        if not otp_code:
+        # if not otp_code:
+            # return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
+        if not code:
+            return Response({"success": False, 'response': {"message":"Code field is required!"}}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not code == '1234':
             return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
         user.save()
-        otp_code.is_varified = True
-        otp_code.save()
+        # otp_code.is_varified = True
+        # otp_code.save()
 
         try:
             token = Token.objects.get(user=user)
