@@ -62,7 +62,7 @@ class CourseApiView(APIView):
                 {'success': False, 'response': {'message': 'The total number of lessons in the lessons list should match the value provided in the lesson_numbers field.'}},
                 status=status.HTTP_400_BAD_REQUEST)
 
-        request.data['user'] = user.id
+        data['user'] = user.id
         serializer = CourseSerializer(data=data)
         if serializer.is_valid():
             course = serializer.save()
