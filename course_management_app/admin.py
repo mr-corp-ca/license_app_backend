@@ -87,3 +87,4 @@ class CourseRatingAdmin(admin.ModelAdmin):
     list_display = ('id', 'course', 'rating', 'created_at')
     search_fields = ('course__name', 'created_by__username')
     ordering = ('-created_at',)
+admin.site.register(LogsModel)

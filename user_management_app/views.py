@@ -112,6 +112,7 @@ class UserApiView(APIView):
 
             if not institute_name or not instructor_name or not services or not license_category:
                 return Response({'success': False, 'response': {'message': 'Institute name, instructor name, services, registration_file and license_category are required!'}}, status=status.HTTP_400_BAD_REQUEST)
+        
         if phone_number:
             user.phone_number = phone_number
         if email:
