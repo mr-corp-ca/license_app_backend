@@ -6,7 +6,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView
 from user_management_app.threads import *
+from user_management_app.models import User
+from rest_framework.authentication import TokenAuthentication
+from django_filters.rest_framework import DjangoFilterBackend
+from course_management_app.pagination import StandardResultSetPagination
+from rest_framework import filters
 import threading
 import json
 # Create your views here.
@@ -327,3 +333,13 @@ class AddVehicleApiView(APIView):
             return Response(
             {'status': False,'response':{'message': f"An error occurred.': {str(e)}"}}, 
             status=status.HTTP_400_BAD_REQUEST)
+
+class LearnerListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [AllowAny]
+    queryset = User.objects.filter(user_type='learner')
+    serializer_class = LearnerSelectedPackageSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['full_name']
+    filterset_fields = []

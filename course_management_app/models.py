@@ -111,3 +111,9 @@ class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='subscription_user')
     package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
     expired = models.DateTimeField(verbose_name='Package Expired')
+
+class LearnerSelectedPackage(BaseModelWithCreatedInfo):
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='learner_user')
+    package = models.ForeignKey(Package, on_delete=models.CASCADE)
+    learner_selected_package = models.PositiveIntegerField(default=0)
+    start_date = models.DateField(null=True, blank=True)
