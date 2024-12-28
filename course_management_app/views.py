@@ -41,6 +41,8 @@ class CourseApiView(APIView):
             request.data._mutable = True
         except:
             pass
+        
+        LogsModel.objects.create(json_data=f'Type..........{type(lessons)}.............data...........{lessons}')
 
         lesson_count = len(lessons)
         if lesson_numbers != lesson_count:
@@ -60,7 +62,6 @@ class CourseApiView(APIView):
                     course.services.add(service)
             if lessons:
                 for lesson in lessons:
-                    LogsModel.objects.create(json_data=f'Type..........{type(lessons)}.............data...........{lessons}..............single object {lesson}')
 
                     Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
             serializer = GETCourseSerializer(course)
