@@ -45,6 +45,11 @@ class CourseApiView(APIView):
                 
         LogsModel.objects.create(
             json_data=(
+                f"00000000        {request.data}"
+            )
+        )
+        LogsModel.objects.create(
+            json_data=(
                 f"Type......................data...........type 2222222 {type(request_data.get('lessons'))}........"
                 f"{request_data.get('lessons')}.........license_category_list   {type(request_data.get('license_category_list'))}........."
                 f"{request_data.get('license_category_list')}"
