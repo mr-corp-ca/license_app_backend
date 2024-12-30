@@ -101,7 +101,7 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
+        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
@@ -140,6 +140,9 @@ class LessonRatingSerializer(serializers.ModelSerializer):
         return Lesson.objects.filter(course=instance.course).count()
     
 
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
 
 class GETSingleCourseSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()  
