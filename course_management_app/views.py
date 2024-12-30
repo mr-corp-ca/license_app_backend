@@ -345,7 +345,7 @@ class LearnerListAPIView(ListAPIView):
     serializer_class = LearnerSelectedPackageSerializer
     pagination_class = StandardResultSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['full_name']
+    search_fields = ['full_name', 'learner_user__courese_status']
     filterset_fields = []
 
 
@@ -378,3 +378,14 @@ class LessonRatingsForSchoolView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+class SchoolPackageDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id):
+        package = Package.objects.filter(id=id).first()
+
+        if not package:
+            return Response({"success": False, "message": "Package not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SchoolPackageDetailSerializer(package)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)

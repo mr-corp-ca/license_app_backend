@@ -97,10 +97,11 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
     course_lesson_numbers = serializers.SerializerMethodField()
     package_price = serializers.SerializerMethodField()
     lesson_completion_percentage = serializers.SerializerMethodField()
+    course_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage']
+        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
@@ -121,6 +122,9 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
         course = instance.course_user.first()
         return (learner_package.learner_selected_package / course.lesson_numbers) * 100 if learner_package and course else 0
 
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
 
  
 class LessonRatingSerializer(serializers.ModelSerializer):
@@ -154,3 +158,19 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = ['id','title','image']
         
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['course', 'title', 'image']
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_details(self, instance):
+        course = Course.objects.filter(user=instance.user).first()
+        course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
+        return LessonSerializer(course_lessons, many=True).data

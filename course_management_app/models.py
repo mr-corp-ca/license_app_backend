@@ -1,6 +1,6 @@
 from django.db import models
 
-from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES
+from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES, COURSE_STATUS_CHOICES
 from user_management_app.models import User
 from utils_app.models import BaseModelWithCreatedInfo
 
@@ -101,6 +101,7 @@ class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
     PACKAGE_PLAN_CHOICE = [
         ('month','Month'),
         ('half-year','Six-Month'),
+
         ('year','Year'),
     ]
 
@@ -118,6 +119,7 @@ class LearnerSelectedPackage(BaseModelWithCreatedInfo):
     package = models.ForeignKey(Package, on_delete=models.CASCADE)
     learner_selected_package = models.PositiveIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
+    courese_status = models.CharField(max_length=255, choices=COURSE_STATUS_CHOICES, default='on-going')
 
 class LogsModel(BaseModelWithCreatedInfo):
     json_data = models.TextField()
