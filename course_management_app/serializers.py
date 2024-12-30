@@ -155,6 +155,9 @@ class SingleCourseSerializer(serializers.ModelSerializer):
         model = Course
         fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
 
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
 
  
 class LessonRatingSerializer(serializers.ModelSerializer):
@@ -223,3 +226,19 @@ class CoursesListSerializer(serializers.ModelSerializer):
         course = instance.package.course_set.first()
         return course.lesson_numbers if course else 0
         
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['course', 'title', 'image']
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_details(self, instance):
+        course = Course.objects.filter(user=instance.user).first()
+        course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
+        return LessonSerializer(course_lessons, many=True).data
