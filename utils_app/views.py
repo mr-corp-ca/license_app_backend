@@ -44,26 +44,65 @@ class RadiusListCreateView(APIView):
     def post(self, request, *args, **kwargs):
         user = request.user.id
         try:
-            locations = request.data.get("locations", [])
-            try:
+            if hasattr(request.data, "_mutable"):
                 request.data._mutable = True
-            except:
-                pass
-            request.data['user'] = user
+
+            # Add user ID to request data
+            request.data["user"] = user
+
+            # Extract main location data if needed
+            main_location_name = request.data.get("main_location_name", "").strip()
+            main_latitude = request.data.get("main_latitude", "").strip()
+            main_longitude = request.data.get("main_longitude", "").strip()
+
+            # Handle locations data dynamically
+            locations = []
+            for key, value in request.data.items():
+                if key.startswith("locations[") and key.endswith("][location_name]"):
+                    index = key.split("[")[1].split("]")[0]
+                    location_data = {
+                        "location_name": request.data.get(f"locations[{index}][location_name]", "").strip(),
+                        "latitude": request.data.get(f"locations[{index}][latitude]", "").strip(),
+                        "longitude": request.data.get(f"locations[{index}][longitude]", "").strip(),
+                    }
+                    locations.append(location_data)
+
+            # Prepare data for serializer
             radius_serializer = CreateRadiusSerializer(data=request.data)
             if radius_serializer.is_valid():
                 radius = radius_serializer.save()
+
+                # Save locations if they exist
                 if locations:
                     for loca in locations:
-                        Location.objects.create(radius=radius, location_name=loca['location_name'],latitude=loca['latitude'], longitude=loca['latitude'])
+                        Location.objects.create(
+                            radius=radius,
+                            location_name=loca["location_name"],
+                            latitude=loca["latitude"],
+                            longitude=loca["longitude"]
+                        )
 
+                # Serialize the saved radius data
                 response_data = RadiusSerializer(radius).data
-                return Response(response_data, status=status.HTTP_201_CREATED)
-
-            return Response(radius_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+                return Response(
+                {"success": True, "response": {"data": response_data}},
+                status=status.HTTP_201_CREATED
+            )
+            else:
+            # Extract and format the first error
+                first_field, errors = next(iter(radius_serializer.errors.items()))
+                formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+                first_error_message = f"{formatted_field} is required!"
+                return Response(
+                    {'success': False, 'response': {'message': first_error_message}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
-            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'success': False, 'response': {'message': str(e)}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         
     def patch(self, request, id):
         try:
@@ -71,32 +110,46 @@ class RadiusListCreateView(APIView):
             radius = Radius.objects.filter(id=id).first()
             if not radius:
                 return Response({"success": False, "response": {"message": 'Radius object not found!'}}, status=status.HTTP_404_NOT_FOUND)
+            
+            locations = []
+            for key, value in request.data.items():
+                if key.startswith("locations[") and key.endswith("][location_name]"):
+                    index = key.split("[")[1].split("]")[0]
+                    location_data = {
+                        "location_name": request.data.get(f"locations[{index}][location_name]", "").strip(),
+                        "latitude": request.data.get(f"locations[{index}][latitude]", "").strip(),
+                        "longitude": request.data.get(f"locations[{index}][longitude]", "").strip(),
+                    }
+                    locations.append(location_data)
 
             radius_serializer = CreateRadiusSerializer(radius, data=request.data, partial=True)  
             if radius_serializer.is_valid():
-                updated_radius = radius_serializer.save()
+                radius = radius_serializer.save()
 
-                locations_data = request.data.get("locations", [])
-                if locations_data:
-                    for loca in locations_data:
-                        existing_location = Location.objects.filter(radius=updated_radius, location_name=loca['location_name']).first()
-                        
-                        if existing_location:
-                            existing_location.latitude = loca['latitude']
-                            existing_location.longitude = loca['longitude']
-                            existing_location.save()
-                        else:
-                            Location.objects.create(
-                                radius=updated_radius,
-                                location_name=loca['location_name'],
-                                latitude=loca['latitude'],
-                                longitude=loca['longitude']
-                            )
-
-                response_data = RadiusSerializer(updated_radius).data
-                return Response(response_data, status=status.HTTP_200_OK)
-
-            return Response(radius_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                if locations:
+                    Location.objects.filter(radius=radius).delete()
+                    for loca in locations:
+                        Location.objects.create(
+                            radius=radius,
+                            location_name=loca["location_name"],
+                            latitude=loca["latitude"],
+                            longitude=loca["longitude"]
+                        )
+                response_data = RadiusSerializer(radius).data
+                return Response(
+                {"success": True, "response": {"data": response_data}},
+                status=status.HTTP_201_CREATED
+            )
+            else:
+                first_field, errors = next(iter(radius_serializer.errors.items()))
+                formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+                first_error_message = f"{formatted_field} is required!"
+                return Response(
+                    {'success': False, 'response': {'message': first_error_message}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
-            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-        
+                return Response(
+                    {'success': False, 'response': {'message': str(e)}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )

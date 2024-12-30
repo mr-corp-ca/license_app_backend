@@ -22,6 +22,7 @@ ALLOWED_HOSTS = [
                 '192.168.10.95',
                ' driving-licence-admin.vercel.app',
                 'api.thegearup.ca',
+                '192.168.10.20',
                 'https://thegearup.ca'
                  ]
 
