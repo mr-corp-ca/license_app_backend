@@ -18,80 +18,83 @@ import json
 from copy import deepcopy
 
 # Create your views here.
-
 class CourseApiView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
-        request_data = request.data
-        services_list = request.data.get('services', [])
-        license_category_list = request.data.get('license_category', [])
-        lesson_numbers = request_data.get('lesson_numbers')
-        lessons = request.data.get('lessons', [])
+        request_data = deepcopy(request.data)
 
-        lesson_numbers = int(request_data.get('lesson_numbers', 0))  # Ensure integer
-        services_list = json.loads(services_list) if isinstance(services_list, str) else services_list
-        license_category_list = json.loads(license_category_list) if isinstance(license_category_list, str) else license_category_list
-        lessons = json.loads(lessons) if isinstance(lessons, str) else lessons
+        # Extract fields with safe defaults
+        title = request_data.get('title', '').strip()
+        description = request_data.get('description', '').strip()
+        price = request_data.get('price', '').strip()
+        refund_policy = request_data.get('refund_policy', '').strip()
+        lesson_numbers = int(request_data.get('lesson_numbers', 0))
 
-        try:
-            request.data._mutable = True
-        except:
-            pass
-        
-        data = deepcopy(request.data)
-                
-        LogsModel.objects.create(
-            json_data=(
-                f"00000000        {data}"
-            )
-        )
-        LogsModel.objects.create(
-            json_data=(
-                f"Type......................data...........type 2222222 {type(request_data.get('lessons'))}........"
-                f"{request_data.get('lessons')}.........license_category_list   {type(request_data.get('license_category_list'))}........."
-                f"{request_data.get('license_category_list')}"
-            )
-        )
+        # Extract lists (ensure they are lists)
+        services_list = request_data.getlist('services', [])
+        license_category_list = request_data.getlist('license_category', [])
 
-        LogsModel.objects.create(
-            json_data=(
-                f"Type......................data...........type {type(lessons)}........{lessons}........."
-                f"license_category_list   {type(license_category_list)}.........{license_category_list}"
-            )
-        )
+        # Parse lessons dynamically
+        lessons = []
+        for i in range(lesson_numbers):
+            lesson_title = request_data.get(f'lessons[{i}][title]', '').strip()
+            lesson_image = request_data.get(f'lessons[{i}][image]', None)
+            if lesson_title and lesson_image:
+                lessons.append({'title': lesson_title, 'image': lesson_image})
 
-        lesson_count = len(lessons)
-        if lesson_numbers != lesson_count:
+        # Validate lesson count
+        if lesson_numbers != len(lessons):
             return Response(
-                {'success': False, 'response': {'message': 'The total number of lessons in the lessons list should match the value provided in the lesson_numbers field.'}},
-                status=status.HTTP_400_BAD_REQUEST)
+                {
+                    'success': False,
+                    'response': {
+                        'message': 'The total number of lessons should match the value provided in the lesson_numbers field.'
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        data['user'] = user.id
-        serializer = CourseSerializer(data=data)
+        # Prepare data for serializer
+        course_data = {
+            'user': user.id,
+            'title': title,
+            'description': description,
+            'price': price,
+            'refund_policy': refund_policy,
+            'lesson_numbers': lesson_numbers,
+        }
+
+        # Serialize and save
+        serializer = CourseSerializer(data=course_data)
         if serializer.is_valid():
             course = serializer.save()
-            if license_category_list:
-                for category in license_category_list:
-                    course.license_category.add(category)
-            if services_list:
-                for service in services_list:
-                    course.services.add(service)
-            if lessons:
-                for lesson in lessons:
 
-                    Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
-            serializer = GETCourseSerializer(course)
-            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
+            # Add related many-to-many fields
+            course.license_category.set(map(int, license_category_list))
+            course.services.set(map(int, services_list))
+
+            # Create lessons
+            for lesson in lessons:
+                Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
+
+            # Serialize the saved course
+            course_serializer = GETCourseSerializer(course)
+            return Response(
+                {"success": True, "response": {"data": course_serializer.data}},
+                status=status.HTTP_201_CREATED
+            )
         else:
+            # Extract and format the first error
             first_field, errors = next(iter(serializer.errors.items()))
             formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
             first_error_message = f"{formatted_field} is required!"
             return Response(
                 {'success': False, 'response': {'message': first_error_message}},
-                status=status.HTTP_400_BAD_REQUEST)
-        
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     def patch(self, request, id):
         user = request.user
         services_list = request.POST.get('services')

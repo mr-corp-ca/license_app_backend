@@ -62,7 +62,7 @@ class GETDiscountOfferSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     class Meta:
         model = DiscountOffer
-        fields = ['offer_type', 'name', 'audience', 'user', 'course', 'discount', 'start_date', 'end_date']
+        fields = ['id', 'offer_type', 'name', 'audience', 'user', 'course', 'discount', 'start_date', 'end_date']
 
     def get_user(self, instance):
         return DiscountOfferUserSerializer(instance.user).data
