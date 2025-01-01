@@ -93,21 +93,22 @@ class VehicleSerializer(serializers.ModelSerializer):
         fields = ['user', 'name', 'vehicle_registration_no', 'license_number', 'vehicle_model', 'image','booking_status']
 
 class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
-    learner_selected_package = serializers.SerializerMethodField()
+    attended_lesson = serializers.SerializerMethodField()
     course_lesson_numbers = serializers.SerializerMethodField()
     package_price = serializers.SerializerMethodField()
     lesson_completion_percentage = serializers.SerializerMethodField()
+    course_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage']
+        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
 
-    def get_learner_selected_package(self, instance):
+    def get_attended_lesson(self, instance):
         learner_package = instance.learner_user.first()
-        return learner_package.learner_selected_package if learner_package else 0
+        return learner_package.attended_lesson if learner_package else 0
 
     def get_course_lesson_numbers(self, instance):
         return instance.course_user.first().lesson_numbers if instance.course_user.exists() else 0
@@ -119,9 +120,46 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
     def get_lesson_completion_percentage(self, instance):
         learner_package = instance.learner_user.first()
         course = instance.course_user.first()
-        return (learner_package.learner_selected_package / course.lesson_numbers) * 100 if learner_package and course else 0
+        return (learner_package.attended_lesson / course.lesson_numbers) * 100 if learner_package and course else 0
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['id', 'course', 'title', 'image']
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_details(self, instance):
+        course = Course.objects.filter(user=instance.user).first()
+        course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
+        return LessonSerializer(course_lessons, many=True).data
+    
+
+class CoursesUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'user_type', 'full_name', 'logo']
+
+class CoursesListSerializer(serializers.ModelSerializer):
+    user = CoursesUserSerializer()
+    course_lesson = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'user', 'start_date', 'attended_lesson', 'courese_status', 'course_lesson']
 
 
+    def get_course_lesson(self, instance):
+        course = instance.package.course_set.first()
+        return course.lesson_numbers if course else 0
  
 class LessonRatingSerializer(serializers.ModelSerializer):
     learner = serializers.CharField(source="user.full_name", read_only=True)

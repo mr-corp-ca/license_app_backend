@@ -76,7 +76,7 @@ class SelectedSubscriptionPackagePalnAdmin(admin.ModelAdmin):
 
 @admin.register(LearnerSelectedPackage)
 class LearnerSelectedPackageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'package', 'learner_selected_package', 'start_date', 'created_at')
+    list_display = ('id', 'user', 'package', 'attended_lesson', 'start_date', 'created_at')
     search_fields = ('user__full_name', 'package__name')
     ordering = ('-created_at',)
 admin.site.register(LogsModel)
