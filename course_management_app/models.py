@@ -14,22 +14,24 @@ class Service(BaseModelWithCreatedInfo):
 
 class Course(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user')
-    license_category = models.ManyToManyField(LicenseCategory, related_name='course_license_category', blank=True)
-    services = models.ManyToManyField(Service, related_name='course_services', blank=True)
-
-    title = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    price = models.FloatField(default=0.0)
+    lesson = models.ManyToManyField('course_management_app.Lesson', related_name='course_lessons',default=None)
+    title = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(blank=True, null=True, verbose_name='About')
+    price = models.FloatField(default=0.0, verbose_name='price per lesson')
     lesson_numbers = models.PositiveIntegerField()
     refund_policy = models.TextField(blank=True, null=True)
-    course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
+    # course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
+
+    def __str__(self):
+        return self.user.full_name
+
+class Lesson(BaseModelWithCreatedInfo):
+    title = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='Lesson/images')
+
     def __str__(self):
         return self.title
 
-class Lesson(BaseModelWithCreatedInfo):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    image = models.ImageField(upload_to='Lession/images')
 
 class Vehicle(BaseModelWithCreatedInfo):
     VEHICLE_STATUS_CHOICES = [
@@ -121,3 +123,9 @@ class LearnerSelectedPackage(BaseModelWithCreatedInfo):
 
 class LogsModel(BaseModelWithCreatedInfo):
     json_data = models.TextField()
+
+
+class CourseRating(BaseModelWithCreatedInfo):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_rating')
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user_rating')
+    rating = models.PositiveIntegerField(default=0)
