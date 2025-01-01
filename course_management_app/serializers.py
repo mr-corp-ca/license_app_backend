@@ -101,7 +101,7 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
+        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
@@ -177,3 +177,21 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
         course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
         return LessonSerializer(course_lessons, many=True).data
 
+    
+
+class CoursesUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'user_type', 'full_name', 'logo']
+
+class CoursesListSerializer(serializers.ModelSerializer):
+    user = CoursesUserSerializer()
+    course_lesson = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'user', 'start_date', 'attended_lesson', 'courese_status', 'course_lesson']
+
+
+    def get_course_lesson(self, instance):
+        course = instance.package.course_set.first()
+        return course.lesson_numbers if course else 0
