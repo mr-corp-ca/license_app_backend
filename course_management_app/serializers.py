@@ -173,17 +173,17 @@ class LessonRatingSerializer(serializers.ModelSerializer):
         return Lesson.objects.filter(course=instance.course).count()
     
 
+class SchoolProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolProfile
+        fields = ['institute_name']
 
-class GETSingleCourseSerializer(serializers.ModelSerializer):
+class SchoolGETSingleCourseSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField()  
+    institute_name = serializers.CharField(source='user.schoolprofile.institute_name', read_only=True)
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
-
-class SingleCourseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Course
-        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at','institute_name']
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -202,8 +202,6 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
         course = Course.objects.filter(user=instance.user).first()
         course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
         return LessonSerializer(course_lessons, many=True).data
-
-    
 
 class CoursesUserSerializer(serializers.ModelSerializer):
     class Meta:
