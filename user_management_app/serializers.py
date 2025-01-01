@@ -38,10 +38,11 @@ class DefaultUserSerializer(serializers.ModelSerializer):
 class SchoolUserSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
     province = serializers.SerializerMethodField()
+    school_profile = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'logo',
-                  'phone_number', 'province', 'city']
+                  'phone_number', 'province', 'city', 'school_profile']
 
     def get_city(self, instance):
         if instance.city:
@@ -52,6 +53,13 @@ class SchoolUserSerializer(serializers.ModelSerializer):
     def get_province(self, instance):
         if instance.province:
             return ProvinceSerializer(instance.province).data
+        else:
+            return None
+    
+    def get_school_profile(self, instance):
+        profile = SchoolProfile.objects.filter(user=instance).first()
+        if profile:
+            return SchoolProfileSerializer(profile).data
         else:
             return None
         
@@ -194,3 +202,9 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = ['id', 'name', 'vehicle_registration_no', 'vehicle_model', 'image', 'booking_status','created_at']
+
+
+class SchoolProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolProfile
+        fields = ['user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']

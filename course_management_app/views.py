@@ -379,3 +379,13 @@ class SchoolPackageDetailAPIView(APIView):
 
         serializer = SchoolPackageDetailSerializer(package)
         return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+class CoursesListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [AllowAny]
+    queryset = Course.objects.filter(user__user_type='school')
+    serializer_class = CoursesListSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title']
+    filterset_fields = ['title', 'price', 'lesson_numbers']

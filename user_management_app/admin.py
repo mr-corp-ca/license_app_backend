@@ -48,3 +48,10 @@ class UserNotificationAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
 admin.site.register(SchoolSetting)
+
+
+@admin.register(SchoolProfile)
+class SchoolProfileAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'institute_name', 'instructor_name', 'created_at', 'updated_at')
+    search_fields = ('user__username', 'institute_name', 'instructor_name')
+    list_filter = ('license_category', 'services', 'created_at')
