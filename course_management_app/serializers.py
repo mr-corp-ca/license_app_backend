@@ -258,7 +258,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['course', 'title', 'image']
+        fields = ['id', 'course', 'title', 'image']
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True)
