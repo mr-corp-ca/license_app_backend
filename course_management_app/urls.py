@@ -7,6 +7,7 @@ urlpatterns = [
     path('DeleteCourse/<int:id>', CourseApiView.as_view()),
     path('MyCourse', CourseApiView.as_view()),
 
+    path('Alllessons',LessonApiView.as_view()),
     path('ServicesList', ServicesApiView.as_view()),
     path('LicenseCategoryList', LicenseCategoryApiView.as_view()),
 
