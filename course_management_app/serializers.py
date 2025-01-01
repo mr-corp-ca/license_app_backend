@@ -156,6 +156,33 @@ class SingleCourseSerializer(serializers.ModelSerializer):
         fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
 
 
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
@@ -195,3 +222,4 @@ class CoursesListSerializer(serializers.ModelSerializer):
     def get_course_lesson(self, instance):
         course = instance.package.course_set.first()
         return course.lesson_numbers if course else 0
+        
