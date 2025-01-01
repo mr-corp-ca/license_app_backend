@@ -410,4 +410,3 @@ class CoursesListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['title']
     filterset_fields = ['title', 'price', 'lesson_numbers']
-

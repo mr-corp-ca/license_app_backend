@@ -103,7 +103,6 @@ class UserApiView(APIView):
 
         phone_number = request.data.get('phone_number')
         email = request.data.get('email')
-
         if user.user_type == 'school':
             institute_name = request.data.get('institute_name')
             instructor_name = request.data.get('instructor_name')

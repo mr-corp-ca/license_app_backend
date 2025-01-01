@@ -38,10 +38,11 @@ class DefaultUserSerializer(serializers.ModelSerializer):
 class SchoolUserSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
     province = serializers.SerializerMethodField()
+    school_profile = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'logo',
-                  'phone_number', 'province', 'city']
+                  'phone_number', 'province', 'city', 'school_profile']
 
     def get_city(self, instance):
         if instance.city:
