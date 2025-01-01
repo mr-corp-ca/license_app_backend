@@ -20,7 +20,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields =[ 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
 
 
 class GETCourseSerializer(serializers.ModelSerializer):
@@ -29,7 +29,7 @@ class GETCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields =[ 'id', 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category']
+        fields =[ 'id', 'user','description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category']
     
     def get_license_category(self, instance):
         license_category = instance.license_category.all()
@@ -122,3 +122,35 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
         return (learner_package.learner_selected_package / course.lesson_numbers) * 100 if learner_package and course else 0
 
 
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['id','title','image']
+        
