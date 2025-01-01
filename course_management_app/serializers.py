@@ -190,10 +190,6 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ['id','title','image']
-class LessonSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Lesson
-        fields = ['id', 'course', 'title', 'image']
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True)
@@ -225,11 +221,6 @@ class CoursesListSerializer(serializers.ModelSerializer):
     def get_course_lesson(self, instance):
         course = instance.package.course_set.first()
         return course.lesson_numbers if course else 0
-        
-class LessonSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Lesson
-        fields = ['id', 'course', 'title', 'image']
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True)

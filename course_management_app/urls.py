@@ -31,3 +31,4 @@ urlpatterns = [
     path('CoursesList', CoursesListAPIView.as_view()),
 
 ]
+
