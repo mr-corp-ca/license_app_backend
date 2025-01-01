@@ -157,7 +157,6 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ['id','title','image']
-        
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
@@ -174,3 +173,4 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
         course = Course.objects.filter(user=instance.user).first()
         course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
         return LessonSerializer(course_lessons, many=True).data
+
