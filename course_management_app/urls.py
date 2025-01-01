@@ -28,5 +28,6 @@ urlpatterns = [
 
     path('learner-list', LearnerListAPIView.as_view()),
     path('SchoolPackageDetail/<int:id>', SchoolPackageDetailAPIView.as_view()),
+    path('CoursesList', CoursesListAPIView.as_view()),
 
 ]

@@ -116,8 +116,8 @@ class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
 
 class LearnerSelectedPackage(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='learner_user')
-    package = models.ForeignKey(Package, on_delete=models.CASCADE)
-    learner_selected_package = models.PositiveIntegerField(default=0)
+    package = models.ForeignKey(Package, on_delete=models.CASCADE, related_name='learnerselectedpackage_package')
+    attended_lesson = models.PositiveIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
     courese_status = models.CharField(max_length=255, choices=COURSE_STATUS_CHOICES, default='on-going')
 
