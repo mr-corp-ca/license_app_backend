@@ -189,6 +189,33 @@ class SchoolGETSingleCourseSerializer(serializers.ModelSerializer):
         learner_package = instance.learner_user.first()
         return learner_package.courese_status
 
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
@@ -271,3 +298,23 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
         course = Course.objects.filter(user=instance.user).first()
         course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
         return LessonSerializer(course_lessons, many=True).data
+
+    
+
+class CoursesUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'user_type', 'full_name', 'logo']
+
+class CoursesListSerializer(serializers.ModelSerializer):
+    user = CoursesUserSerializer()
+    course_lesson = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'user', 'start_date', 'attended_lesson', 'courese_status', 'course_lesson']
+
+
+    def get_course_lesson(self, instance):
+        course = instance.package.course_set.first()
+        return course.lesson_numbers if course else 0
+        
