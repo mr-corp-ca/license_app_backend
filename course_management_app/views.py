@@ -396,7 +396,8 @@ class SchoolPackageDetailAPIView(APIView):
         package = Package.objects.filter(id=id).first()
 
         if not package:
-            return Response({"success": False, "message": "Package not found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status": False, "response": {"message": "No Package found with this ID."}},
+            status=status.HTTP_404_NOT_FOUND)
 
         serializer = SchoolPackageDetailSerializer(package)
         return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
@@ -410,3 +411,23 @@ class CoursesListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ['title']
     filterset_fields = ['title', 'price', 'lesson_numbers']
+
+
+class PolicyApiview(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        try:
+            general_policy = GeneralPolicy.objects.first()
+            
+            if general_policy:
+                serializer = GeneralPolicySerializer(general_policy)
+                return Response({'success':True, "data": serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({"status": False, "response": {"message": "No Package found with this ID."}},status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": f"An error occurred: {str(e)}"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
