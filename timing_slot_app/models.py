@@ -13,6 +13,9 @@ class MonthlySchedule(BaseModelWithCreatedInfo):
     launch_break_end = models.TimeField(null=True, blank=True)
     extra_space_start = models.TimeField(null=True, blank=True)
     extra_space_end = models.TimeField(null=True, blank=True)
+    lesson_gap = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Lesson gap in minutes')
+    lesson_duration = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Lesson duration in hours')
+    shift_timing = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Shift timing in hours')
 
     class Meta:
         unique_together = ('user', 'date')

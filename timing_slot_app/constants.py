@@ -59,7 +59,7 @@ def get_schedule_times(schedule):
             else:
                 available_times.append(current_time.time())
         
-        current_time += timedelta(minutes=60)
+        current_time += timedelta(minutes=schedule.lesson_gap + (schedule.lesson_duration * 60))
 
     return available_times
 
