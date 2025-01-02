@@ -173,3 +173,12 @@ class LearnerReport(BaseModelWithCreatedInfo):
 #     def __str__(self) :
 #         return f"Institute Name {self.institute_name}"
  
+
+class SchoolProfile(BaseModelWithCreatedInfo):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    license_category = models.ManyToManyField('course_management_app.LicenseCategory', blank=True)
+    services = models.ManyToManyField('course_management_app.Service', blank=True)
+
+    institute_name = models.CharField(max_length=255)
+    instructor_name = models.CharField(max_length=255)
+    registration_file = models.FileField(upload_to='media/school/registration_file')

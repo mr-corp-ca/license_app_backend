@@ -99,8 +99,19 @@ class CourseApiView(APIView):
 
     def get(self, request):
         user = request.user
+
+        try:
+            school_profile = SchoolProfile.objects.get(user=user)
+        except SchoolProfile.DoesNotExist:
+            return Response(
+                {"success": False, "response": {"message": "School Profile not found!"}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         courses = Course.objects.filter(user=user).order_by('-created_at')
-        serializer = GETSingleCourseSerializer(courses, many=True)
+
+        serializer = SchoolGETSingleCourseSerializer(courses, many=True)
+
         return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
 
 
@@ -345,7 +356,7 @@ class LearnerListAPIView(ListAPIView):
     serializer_class = LearnerSelectedPackageSerializer
     pagination_class = StandardResultSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['full_name']
+    search_fields = ['full_name', 'learner_user__courese_status']
     filterset_fields = []
 
 
@@ -378,3 +389,24 @@ class LessonRatingsForSchoolView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+class SchoolPackageDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id):
+        package = Package.objects.filter(id=id).first()
+
+        if not package:
+            return Response({"success": False, "message": "Package not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SchoolPackageDetailSerializer(package)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+class CoursesListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [AllowAny]
+    queryset = Course.objects.filter(user__user_type='school')
+    serializer_class = CoursesListSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title']
+    filterset_fields = ['title', 'price', 'lesson_numbers']
