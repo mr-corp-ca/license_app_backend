@@ -132,5 +132,4 @@ class SchoolRating(BaseModelWithCreatedInfo):
     learner_selected_package = models.PositiveIntegerField(default=0)
     start_date = models.DateField(null=True, blank=True)
 
-class LogsModel(BaseModelWithCreatedInfo):
-    json_data = models.TextField()
+

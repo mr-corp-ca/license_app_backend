@@ -215,7 +215,6 @@ class LearnerMonthlyScheduleView(APIView):
                     'location': selected_location,
                     'latitude': current_location_latitude,
                     'longitude': current_location_longitude,
-                    'lesson_slection': data.get('lesson_slection'),
                     'slot': data.get('slot'),
                     'road_test': data.get('road_test', False),
                 }
