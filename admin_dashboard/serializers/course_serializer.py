@@ -10,17 +10,25 @@ class LessonSerializer(serializers.ModelSerializer):
         fields = ['id','title']
 
 class AdminCourseSerializer(serializers.ModelSerializer):
+    course_cover_image = serializers.SerializerMethodField()
     class Meta:
         model = Course
         fields =[ 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
+
+    def get_course_cover_image(self, instance):
+        return ''
 class AdminGETCourseSerializer(serializers.ModelSerializer):
     lesson = serializers.SerializerMethodField()
     services = serializers.SerializerMethodField()
     license_category = serializers.SerializerMethodField()
+    course_cover_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields =[ 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category','lesson']
+
+    def get_course_cover_image(self, instance):
+        return ''
     
     def get_lesson(self, instance):
         lesson = Lesson.objects.filter(course=instance)
@@ -59,6 +67,8 @@ class GETSchoolCourseSerializer(serializers.ModelSerializer):
     total_instructors = serializers.SerializerMethodField()
     total_lessons = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
+    course_cover_image = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Course
@@ -67,6 +77,9 @@ class GETSchoolCourseSerializer(serializers.ModelSerializer):
             'course_cover_image', 'services',
             'license_category', 'lesson', 'total_instructors', 'total_lessons', 'plans'
         ]
+
+    def get_course_cover_image(self, instance):
+        return ''
 
     def get_lesson(self, instance):
         lesson = Lesson.objects.filter(course=instance)
