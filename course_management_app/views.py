@@ -23,127 +23,118 @@ class CourseApiView(APIView):
 
     def post(self, request):
         user = request.user
-        request_data = deepcopy(request.data)
 
-        # Extract fields with safe defaults
-        title = request_data.get('title', '').strip()
-        description = request_data.get('description', '').strip()
-        price = request_data.get('price', '').strip()
-        refund_policy = request_data.get('refund_policy', '').strip()
-        lesson_numbers = int(request_data.get('lesson_numbers', 0))
-
-        # Extract lists (ensure they are lists)
-        services_list = request_data.getlist('services', [])
-        license_category_list = request_data.getlist('license_category', [])
-
-        # Parse lessons dynamically
-        lessons = []
-        for i in range(lesson_numbers):
-            lesson_title = request_data.get(f'lessons[{i}][title]', '').strip()
-            lesson_image = request_data.get(f'lessons[{i}][image]', None)
-            if lesson_title and lesson_image:
-                lessons.append({'title': lesson_title, 'image': lesson_image})
-
-        # Validate lesson count
-        if lesson_numbers != len(lessons):
+        existing_course = Course.objects.filter(user=user).first()
+        if existing_course:
             return Response(
                 {
-                    'success': False,
-                    'response': {
-                        'message': 'The total number of lessons should match the value provided in the lesson_numbers field.'
+                    "success": False,
+                    "response": {
+                        "message": "You can only create one course. Please edit or delete the existing course."
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Prepare data for serializer
-        course_data = {
-            'user': user.id,
-            'title': title,
-            'description': description,
-            'price': price,
-            'refund_policy': refund_policy,
-            'lesson_numbers': lesson_numbers,
-        }
+        request_data = request.data
+        description = request.data.get('description', '').strip()
+        price = request.data.get('price', 0.0)
+        refund_policy = request.data.get('refund_policy', '').strip()
+        lesson_numbers = int(request.data.get('lesson_numbers', 0))
+        lessons = request_data.get('lessons')
 
-        # Serialize and save
-        serializer = CourseSerializer(data=course_data)
-        if serializer.is_valid():
-            course = serializer.save()
-
-            # Add related many-to-many fields
-            course.license_category.set(map(int, license_category_list))
-            course.services.set(map(int, services_list))
-
-            # Create lessons
-            for lesson in lessons:
-                Lesson.objects.create(course=course, title=lesson['title'], image=lesson['image'])
-
-            # Serialize the saved course
-            course_serializer = GETCourseSerializer(course)
+        if len(lessons) != lesson_numbers:
             return Response(
-                {"success": True, "response": {"data": course_serializer.data}},
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            # Extract and format the first error
-            first_field, errors = next(iter(serializer.errors.items()))
-            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
-            first_error_message = f"{formatted_field} is required!"
-            return Response(
-                {'success': False, 'response': {'message': first_error_message}},
+                {
+                    "success": False,
+                    "response": {
+                        "message": "The total number of lessons should match the value provided in lesson_numbers."
+                    }
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    def patch(self, request, id):
-        user = request.user
-        services_list = request.POST.get('services')
-        license_category_list = request.POST.get('license_category')
-        course = Course.objects.filter(id=id).first()
-        if not course:
-            return Response({"success": False, "response": {"message": 'Course not found!'}}, status=status.HTTP_404_NOT_FOUND)
-
-        if type(services_list) == str:
-            services_list = json.loads(services_list) 
-
-        if type(license_category_list) == str:
-            license_category_list = json.loads(license_category_list)
-
-        serializer = CourseSerializer(course, data=request.data, partial=True)
+        course_data = {
+            "user": user.id,
+            "description": description,
+            "price": price,
+            "refund_policy": refund_policy,
+            "lesson_numbers": lesson_numbers,
+        }
+        serializer = SingleCourseSerializer(data=course_data)
         if serializer.is_valid():
             course = serializer.save()
-            if license_category_list:
-                course.license_category.clear()
-                for category in license_category_list:
-                    course.license_category.add(category)
-            if services_list:
-                course.services.clear()
-                for service in services_list:
-                    course.services.add(service)
-            serializer = GETCourseSerializer(course)
-            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_201_CREATED)
-        else:
-            first_field, errors = next(iter(serializer.errors.items()))
-            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
-            first_error_message = f"{formatted_field} is required!"
+
+            course.lesson.set(lessons)
+
+            course_data = GETSingleCourseSerializer(course)
             return Response(
-                {'success': False, 'response': {'message': first_error_message}},
-                status=status.HTTP_400_BAD_REQUEST)
+                {
+                    "success": True,
+                    "response": {"data": course_data.data}
+                },
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def patch(self, request, id):
+        user = request.user
+        course = Course.objects.filter(id=id, user=user).first()
+        if not course:
+            return Response(
+                {"success": False, "response": {"message": "Course not found!"}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = SingleCourseSerializer(course, data=request.data, partial=True)
+        if serializer.is_valid():
+            course = serializer.save()
+            return Response(
+                {"success": True, "response": {"data": GETSingleCourseSerializer(course).data}},
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     def get(self, request):
         user = request.user
+
+        try:
+            school_profile = SchoolProfile.objects.get(user=user)
+        except SchoolProfile.DoesNotExist:
+            return Response(
+                {"success": False, "response": {"message": "School Profile not found!"}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         courses = Course.objects.filter(user=user).order_by('-created_at')
-        serializer = GETCourseSerializer(courses, many=True)
+
+        serializer = SchoolGETSingleCourseSerializer(courses, many=True)
+
         return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
 
-    
+
     def delete(self, request, id):
         user = request.user
-        course = Course.objects.filter(id=id).first()
+        course = Course.objects.filter(id=id, user=user).first()
         if not course:
-            return Response({"success": False, "response": {"message": 'Course not found!'}}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"success": False, "response": {"message": "Course not found!"}},
+                status=status.HTTP_404_NOT_FOUND
+            )
         course.delete()
-        return Response({"success": True, "response": {"message": 'Course delete successfully!'}}, status=status.HTTP_200_OK)
+        return Response(
+            {"success": True, "response": {"message": "Course deleted successfully!"}},
+            status=status.HTTP_200_OK
+        )
+
+class LessonApiView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        lessons = Lesson.objects.all()
+        serializer = LessonSerializer(lessons, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
 
 
 class ServicesApiView(APIView):
@@ -365,5 +356,57 @@ class LearnerListAPIView(ListAPIView):
     serializer_class = LearnerSelectedPackageSerializer
     pagination_class = StandardResultSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['full_name']
+    search_fields = ['full_name', 'learner_user__courese_status']
     filterset_fields = []
+
+
+
+class LessonRatingsForSchoolView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        try:
+            course = Course.objects.filter(id=id).first()
+
+            if not course:
+                return Response(
+                    {"status": False, "response": {"message": "No course found with this ID."}},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            course_ratings = CourseRating.objects.filter(course=course)
+
+            serializer = LessonRatingSerializer(course_ratings, many=True)
+
+            return Response(
+                {"status": True, "response": {"data": serializer.data}},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": f"An error occurred: {str(e)}"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+class SchoolPackageDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id):
+        package = Package.objects.filter(id=id).first()
+
+        if not package:
+            return Response({"success": False, "message": "Package not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SchoolPackageDetailSerializer(package)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+class CoursesListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [AllowAny]
+    queryset = Course.objects.filter(user__user_type='school')
+    serializer_class = CoursesListSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['title']
+    filterset_fields = ['title', 'price', 'lesson_numbers']

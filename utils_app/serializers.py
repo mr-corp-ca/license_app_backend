@@ -30,4 +30,4 @@ class CreateRadiusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Radius
-        fields = ['user', 'main_location_name', 'main_latitude', 'main_longitude']
+        fields = ['id','user', 'main_location_name', 'main_latitude', 'main_longitude']

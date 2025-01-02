@@ -7,6 +7,7 @@ urlpatterns = [
     path('DeleteCourse/<int:id>', CourseApiView.as_view()),
     path('MyCourse', CourseApiView.as_view()),
 
+    path('Alllessons',LessonApiView.as_view()),
     path('ServicesList', ServicesApiView.as_view()),
     path('LicenseCategoryList', LicenseCategoryApiView.as_view()),
 
@@ -26,5 +27,8 @@ urlpatterns = [
     path('AddVehicle',AddVehicleApiView.as_view(),name= 'add-vehicle'),
 
     path('learner-list', LearnerListAPIView.as_view()),
+    path('SchoolPackageDetail/<int:id>', SchoolPackageDetailAPIView.as_view()),
+    path('CoursesList', CoursesListAPIView.as_view()),
 
 ]
+

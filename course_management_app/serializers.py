@@ -20,7 +20,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields =[ 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
 
 
 class GETCourseSerializer(serializers.ModelSerializer):
@@ -29,7 +29,7 @@ class GETCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields =[ 'id', 'user', 'title', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category']
+        fields =[ 'id', 'user','description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category']
     
     def get_license_category(self, instance):
         license_category = instance.license_category.all()
@@ -93,21 +93,22 @@ class VehicleSerializer(serializers.ModelSerializer):
         fields = ['user', 'name', 'vehicle_registration_no', 'license_number', 'vehicle_model', 'image','booking_status']
 
 class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
-    learner_selected_package = serializers.SerializerMethodField()
+    attended_lesson = serializers.SerializerMethodField()
     course_lesson_numbers = serializers.SerializerMethodField()
     package_price = serializers.SerializerMethodField()
     lesson_completion_percentage = serializers.SerializerMethodField()
+    course_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'learner_selected_package', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage']
+        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
 
-    def get_learner_selected_package(self, instance):
+    def get_attended_lesson(self, instance):
         learner_package = instance.learner_user.first()
-        return learner_package.learner_selected_package if learner_package else 0
+        return learner_package.attended_lesson if learner_package else 0
 
     def get_course_lesson_numbers(self, instance):
         return instance.course_user.first().lesson_numbers if instance.course_user.exists() else 0
@@ -119,6 +120,189 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
     def get_lesson_completion_percentage(self, instance):
         learner_package = instance.learner_user.first()
         course = instance.course_user.first()
-        return (learner_package.learner_selected_package / course.lesson_numbers) * 100 if learner_package and course else 0
+        return (learner_package.attended_lesson / course.lesson_numbers) * 100 if learner_package and course else 0
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+class SchoolProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolProfile
+        fields = ['institute_name']
+
+class SchoolGETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    institute_name = serializers.CharField(source='user.schoolprofile.institute_name', read_only=True)
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at','institute_name']
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+ 
+class LessonRatingSerializer(serializers.ModelSerializer):
+    learner = serializers.CharField(source="user.full_name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    lesson = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = CourseRating
+        fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
 
 
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['id','title','image']
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_details(self, instance):
+        course = Course.objects.filter(user=instance.user).first()
+        course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
+        return LessonSerializer(course_lessons, many=True).data
+
+class CoursesUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'user_type', 'full_name', 'logo']
+
+class CoursesListSerializer(serializers.ModelSerializer):
+    user = CoursesUserSerializer()
+    course_lesson = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'user', 'start_date', 'attended_lesson', 'courese_status', 'course_lesson']
+
+    def get_course_status(self, instance):
+        learner_package = instance.learner_user.first()
+        return learner_package.courese_status
+
+    def get_course_lesson(self, instance):
+        course = instance.package.course_set.first()
+        return course.lesson_numbers if course else 0
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_count(self, instance):
+        return Lesson.objects.filter(course=instance.course).count()
+    
+
+
+class GETSingleCourseSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  
+    class Meta:
+        model = Course
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+
+class SingleCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+
+
+class SchoolPackageDetailSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True)
+    lesson_details = serializers.SerializerMethodField()
+    class Meta:
+        model = Package
+        fields = ['id', 'name', 'price', 'total_course_hour', 'lesson_numbers', 'free_pickup', 'services', 'lesson_details']
+
+    def get_lesson_details(self, instance):
+        course = Course.objects.filter(user=instance.user).first()
+        course_lessons = Lesson.objects.filter(course=course)[:instance.lesson_numbers]
+        return LessonSerializer(course_lessons, many=True).data  
+
+class CoursesUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'user_type', 'full_name', 'logo']
+
+class CoursesListSerializer(serializers.ModelSerializer):
+    user = CoursesUserSerializer()
+    course_lesson = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'user', 'start_date', 'attended_lesson', 'courese_status', 'course_lesson']
+
+
+    def get_course_lesson(self, instance):
+        course = instance.package.course_set.first()
+        return course.lesson_numbers if course else 0
+        

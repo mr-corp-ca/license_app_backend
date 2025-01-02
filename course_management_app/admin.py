@@ -1,13 +1,14 @@
 from django.contrib import admin
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, LogsModel
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, LogsModel,CourseRating
 
 # Register your models here.
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('title', 'price', 'lesson_numbers', 'user', 'created_at')
-    search_fields = ('title', 'license_category', 'price', 'lesson_numbers', 'user__username', 'user__full_name', 'user__email',  'user__first_name', 'user__last_name')
-    list_filter = ('license_category', 'created_at')
+    list_display = ('price', 'lesson_numbers', 'user', 'created_at')
+    fields = ['user','lesson','price', 'lesson_numbers','description','refund_policy']
+    search_fields = ('lesson__title', 'price', 'lesson_numbers', 'user__username', 'user__full_name', 'user__email', 'user__first_name', 'user__last_name')
+    list_filter = ('created_at',)  
     ordering = ('-created_at',)
 
 
@@ -32,10 +33,9 @@ class DiscountOfferAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'course', 'image')
-    search_fields = ('title','course__title')
+    list_display = ('id', 'title', 'image')  
+    search_fields = ('title',)
     ordering = ('-created_at',)
-
 
 @admin.register(LicenseCategory)
 class LicenseCategoryAdmin(admin.ModelAdmin):
@@ -76,7 +76,15 @@ class SelectedSubscriptionPackagePalnAdmin(admin.ModelAdmin):
 
 @admin.register(LearnerSelectedPackage)
 class LearnerSelectedPackageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'package', 'learner_selected_package', 'start_date', 'created_at')
+    list_display = ('id', 'user', 'package', 'attended_lesson', 'start_date', 'created_at')
     search_fields = ('user__full_name', 'package__name')
     ordering = ('-created_at',)
 admin.site.register(LogsModel)
+
+
+@admin.register(CourseRating)
+class CourseRatingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'course', 'rating', 'created_at')
+    search_fields = ('course__name', 'created_by__username')
+    ordering = ('-created_at',)
+
