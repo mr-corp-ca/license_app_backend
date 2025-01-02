@@ -1,5 +1,5 @@
 from django.contrib import admin
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, LogsModel,CourseRating
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, LogsModel, SchoolRating
 
 # Register your models here.
 
@@ -82,7 +82,7 @@ class LearnerSelectedPackageAdmin(admin.ModelAdmin):
 admin.site.register(LogsModel)
 
 
-@admin.register(CourseRating)
+@admin.register(SchoolRating)
 class CourseRatingAdmin(admin.ModelAdmin):
     list_display = ('id', 'course', 'rating', 'created_at')
     search_fields = ('course__name', 'created_by__username')

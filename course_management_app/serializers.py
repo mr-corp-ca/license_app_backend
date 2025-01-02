@@ -133,7 +133,7 @@ class LessonRatingSerializer(serializers.ModelSerializer):
     lesson = serializers.SerializerMethodField()  
 
     class Meta:
-        model = CourseRating
+        model = SchoolRating
         fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
 
     def get_lesson_count(self, instance):
@@ -166,7 +166,7 @@ class LessonRatingSerializer(serializers.ModelSerializer):
     lesson = serializers.SerializerMethodField()  
 
     class Meta:
-        model = CourseRating
+        model = SchoolRating
         fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
 
     def get_lesson_count(self, instance):
@@ -196,7 +196,7 @@ class LessonRatingSerializer(serializers.ModelSerializer):
     lesson = serializers.SerializerMethodField()  
 
     class Meta:
-        model = CourseRating
+        model = SchoolRating
         fields = ['id', 'course_title', 'learner', 'rating', 'lesson']
 
     def get_lesson_count(self, instance):

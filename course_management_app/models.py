@@ -124,7 +124,7 @@ class LearnerSelectedPackage(BaseModelWithCreatedInfo):
 
 
 
-class CourseRating(BaseModelWithCreatedInfo):
+class SchoolRating(BaseModelWithCreatedInfo):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_rating')
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user_rating')
     rating = models.PositiveIntegerField(default=0)

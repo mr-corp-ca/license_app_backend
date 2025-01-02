@@ -374,7 +374,7 @@ class LessonRatingsForSchoolView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            course_ratings = CourseRating.objects.filter(course=course)
+            course_ratings = SchoolRating.objects.filter(course=course)
 
             serializer = LessonRatingSerializer(course_ratings, many=True)
 
