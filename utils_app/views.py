@@ -26,7 +26,7 @@ class CityApiView(APIView):
     def get(self, request):
         province = request.GET.get('province', None)
         if not province:
-            return Response({"message": "Enter Province for city"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success':False,'response':{"message": "Enter Province for city"}}, status=status.HTTP_400_BAD_REQUEST)
         city_list = City.objects.filter(province=province)
         serializer = CitySerializer(city_list, many=True)
         return Response({'success': True, 'response': {'data': serializer.data}},

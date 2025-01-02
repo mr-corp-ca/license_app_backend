@@ -1,5 +1,6 @@
 from django.contrib import admin
-from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, SchoolRating
+from course_management_app.models import Course, DiscountOffer, Lesson, Package, Vehicle, Service, LicenseCategory, Certificate, UserSelectedCourses,SubscriptionPackagePlan,SelectedSubscriptionPackagePaln, LearnerSelectedPackage, SchoolRating, GeneralPolicy
+
 
 # Register your models here.
 
@@ -87,3 +88,4 @@ class CourseRatingAdmin(admin.ModelAdmin):
     search_fields = ('course__name', 'created_by__username')
     ordering = ('-created_at',)
 
+admin.site.register(GeneralPolicy)

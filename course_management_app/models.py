@@ -133,3 +133,7 @@ class SchoolRating(BaseModelWithCreatedInfo):
     start_date = models.DateField(null=True, blank=True)
 
 
+
+class GeneralPolicy(BaseModelWithCreatedInfo):
+    about = models.TextField(null=True, blank=True, verbose_name='About')    
+    refund_policy = models.TextField(null=True, blank=True,verbose_name='Refund_Policy')

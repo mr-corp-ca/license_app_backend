@@ -306,3 +306,9 @@ class CoursesListSerializer(serializers.ModelSerializer):
         course = instance.package.course_set.first()
         return course.lesson_numbers if course else 0
         
+
+
+class GeneralPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralPolicy
+        fields = ['id', 'about', 'refund_policy']
