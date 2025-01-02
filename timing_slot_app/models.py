@@ -1,4 +1,5 @@
 from django.db import models
+from timing_slot_app.constants import LESSON_SELECT_CHOICE
 from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
@@ -21,18 +22,16 @@ class MonthlySchedule(BaseModelWithCreatedInfo):
     
 
 class LearnerBookingSchedule(BaseModelWithCreatedInfo):
-    LESSON_SELECT_CHOICE =(
-        ('i need a special lesson','I Need a special lesson'),
-        ('i want to hire a car','I want to hire a car'),
-    )
+
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='learnerweekly_user')
     vehicle = models.ForeignKey('course_management_app.Vehicle', on_delete=models.CASCADE, related_name='learnerboked_vehicle')
-    location =  models.CharField(max_length=255,null=True,blank=True)
+    location =  models.CharField(max_length=500,null=True,blank=True)
     latitude =  models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
     longitude =  models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
-    lesson_slection = models.CharField(max_length=50, null=True, blank=True, choices=LESSON_SELECT_CHOICE, verbose_name='Lesson Selection')
     date = models.DateField()
     road_test = models.BooleanField(default= False)
+    special_lesson = models.BooleanField(default= False)
+    hire_car = models.BooleanField(default= False)
     slot = models.TimeField(null=True,blank=True)
     class Meta:
         unique_together = ('user', 'date')
