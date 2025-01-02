@@ -9,7 +9,6 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('course_management_app', '0018_alter_learnerselectedpackage_package'),
         ('user_management_app', '0014_schoolsetting_learner_alter_schoolsetting_instructor'),
     ]
 
