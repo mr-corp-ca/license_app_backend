@@ -23,7 +23,7 @@ class Course(BaseModelWithCreatedInfo):
     # course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
 
     def __str__(self):
-        return self.user.full_name
+        return self.user.username
 
 class Lesson(BaseModelWithCreatedInfo):
     title = models.CharField(max_length=255)
