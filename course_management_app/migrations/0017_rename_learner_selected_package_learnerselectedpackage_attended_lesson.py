@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('course_management_app', '0016_learnerselectedpackage_courese_status'),
+        ('course_management_app', '0016_remove_course_course_cover_image_and_more'),
     ]
 
     operations = [

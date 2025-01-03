@@ -103,6 +103,7 @@ class UserApiView(APIView):
 
         phone_number = request.data.get('phone_number')
         email = request.data.get('email')
+
         if user.user_type == 'school':
             institute_name = request.data.get('institute_name')
             instructor_name = request.data.get('instructor_name')
@@ -112,6 +113,7 @@ class UserApiView(APIView):
 
             if not institute_name or not instructor_name or not services or not license_category:
                 return Response({'success': False, 'response': {'message': 'Institute name, instructor name, services, registration_file and license_category are required!'}}, status=status.HTTP_400_BAD_REQUEST)
+        
         if phone_number:
             user.phone_number = phone_number
         if email:
@@ -135,7 +137,14 @@ class UserApiView(APIView):
                         
                         )
                     school_profile.save()
-                    serializer = SchoolUserSerializer(user)
+                if services:
+                    school_profile.services.set(services)
+                if license_category:
+                    school_profile.license_category.set(license_category)
+
+
+                school_profile.save()
+                serializer = SchoolUserSerializer(user)
 
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
         else:

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle,Package,Service,Lesson
+from course_management_app.models import Course, Vehicle,Package,Service,Lesson, LicenseCategory
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
 
@@ -204,7 +204,21 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'vehicle_registration_no', 'vehicle_model', 'image', 'booking_status','created_at']
 
 
+class LicenseCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LicenseCategory
+        fields = ['id', 'name']
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name']
+
+
 class SchoolProfileSerializer(serializers.ModelSerializer):
+    license_category = LicenseCategorySerializer(many=True)
+    services = ServiceSerializer(many=True)
+
     class Meta:
         model = SchoolProfile
-        fields = ['user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']
+        fields = ['id', 'user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']
