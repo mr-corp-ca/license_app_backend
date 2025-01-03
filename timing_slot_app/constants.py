@@ -37,7 +37,6 @@ def get_schedule_times(schedule):
     start_time = timezone.datetime.combine(schedule.date, schedule.start_time)
     end_time = timezone.datetime.combine(schedule.date, schedule.end_time)
 
-    # If break times are set, convert them to datetime objects
     if schedule.launch_break_start and schedule.launch_break_end:
         launch_break_start = timezone.datetime.combine(schedule.date, schedule.launch_break_start)
         launch_break_end = timezone.datetime.combine(schedule.date, schedule.launch_break_end)

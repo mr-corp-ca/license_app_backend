@@ -76,20 +76,10 @@ class LearnerMonthlyScheduleView(APIView):
                 booked_slots = LearnerBookingSchedule.objects.filter(vehicle_id=vehicle_id).values_list("slot", flat=True)
 
                 booked_slots = [slot.strftime("%H:%M") for slot in booked_slots]
-                # available_times = get_schedule_times(monthly_schedules)
 
                 available_slots = []
                 for schedule in monthly_schedules:
-                #     start_time = schedule.start_time
-                #     end_time = schedule.end_time
-                #     lunch_break_start = schedule.launch_break_start
-                #     lunch_break_end = schedule.launch_break_end
-
-                #     if start_time.strftime("%H:%M") not in booked_slots and \
-                #         (not lunch_break_start or start_time < lunch_break_start or start_time >= lunch_break_end) and \
-                #         start_time != end_time:
                     available_slots.append({'slot':get_schedule_times(schedule), 'date':schedule.date, 'day_name':get_day_name(schedule.date)})
-            
 
 
                 return Response({
