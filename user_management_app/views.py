@@ -95,7 +95,13 @@ class UserApiView(APIView):
 
     def get(self, request):
         user = request.user
-        serializer = DefaultUserSerializer(user)
+        if user.user_type == 'school':
+            serializer = SchoolUserSerializer(user)
+        elif user.user_type == 'learner':
+            serializer = DefaultUserSerializer(user)
+        
+        else:
+            return Response({"success": False, 'response': {"message": "Invalid user type!"}}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": True, 'response': {"data": serializer.data}}, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -135,7 +141,7 @@ class UserApiView(APIView):
                         
                         )
                     school_profile.save()
-                    serializer = SchoolUserSerializer(user)
+                serializer = SchoolUserSerializer(user)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
         else:
             # Extract and format the error messages
