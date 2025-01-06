@@ -97,11 +97,10 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
     course_lesson_numbers = serializers.SerializerMethodField()
     package_price = serializers.SerializerMethodField()
     lesson_completion_percentage = serializers.SerializerMethodField()
-    course_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage', 'courese_status']
+        fields = ['id', 'full_name', 'logo', 'attended_lesson', 'course_lesson_numbers', 'package_price', 'lesson_completion_percentage']
 
     def get_logo(self, instance):
         return instance.logo.url if instance.logo else None
@@ -121,10 +120,6 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
         learner_package = instance.learner_user.first()
         course = instance.course_user.first()
         return (learner_package.attended_lesson / course.lesson_numbers) * 100 if learner_package and course else 0
-
-    def get_course_status(self, instance):
-        learner_package = instance.learner_user.first()
-        return learner_package.courese_status
 
  
 class LessonRatingSerializer(serializers.ModelSerializer):

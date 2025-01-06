@@ -20,7 +20,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.generics import ListAPIView
+from rest_framework.authentication import TokenAuthentication
+from course_management_app.pagination import StandardResultSetPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 import stripe
+import json
 # from django.contrib.gis.geos import Point
 # from django.contrib.gis.db.models.functions import Distance
 # from django.contrib.gis.measure import D
@@ -95,7 +101,13 @@ class UserApiView(APIView):
 
     def get(self, request):
         user = request.user
-        serializer = DefaultUserSerializer(user)
+        if user.user_type == 'school':
+            serializer = SchoolUserSerializer(user)
+        elif user.user_type == 'learner':
+            serializer = DefaultUserSerializer(user)
+        
+        else:
+            return Response({"success": False, 'response': {"message": "Invalid user type!"}}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": True, 'response': {"data": serializer.data}}, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -106,13 +118,16 @@ class UserApiView(APIView):
         if user.user_type == 'school':
             institute_name = request.data.get('institute_name')
             instructor_name = request.data.get('instructor_name')
-            services = request.data.get('services')
+            # services = request.data.get('services')
             license_category = request.data.get('license_category')
             registration_file = request.data.get('registration_file')
 
-            if not institute_name or not instructor_name or not services or not license_category:
-                return Response({'success': False, 'response': {'message': 'Institute name, instructor name, services, registration_file and license_category are required!'}}, status=status.HTTP_400_BAD_REQUEST)
-        
+            if not institute_name or not instructor_name  or not license_category:
+                return Response({'success': False, 'response': {'message': 'Institute name, instructor name, registration_file and license_category are required!'}}, status=status.HTTP_400_BAD_REQUEST)
+
+            if type(license_category) == str:
+                license_category = json.loads(license_category)
+
         if phone_number:
             user.phone_number = phone_number
         if email:
@@ -134,8 +149,13 @@ class UserApiView(APIView):
                         registration_file=registration_file,
                         
                         )
-                    school_profile.save()
-                    serializer = SchoolUserSerializer(user)
+                school_profile.institute_name = institute_name
+                school_profile.instructor_name = instructor_name
+                school_profile.registration_file = registration_file
+                school_profile.save()
+                school_profile.license_category.set(license_category)
+
+                serializer = SchoolUserSerializer(user)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
         else:
             # Extract and format the error messages
@@ -834,3 +854,13 @@ class LearnerDetailApiview(APIView):
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
         
+
+class SchoolRatingListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [AllowAny]
+    queryset = User.objects.filter(user_type='learner')
+    serializer_class = SchoolRatingSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = []
+    filterset_fields = []
