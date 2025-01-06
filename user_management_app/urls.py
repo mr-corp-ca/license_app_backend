@@ -17,8 +17,8 @@ urlpatterns = [
     path('RatingView/', RatingView.as_view()),
     path('UserNotification/', UserNotificationAPIView.as_view()),
     # path('SearchSchool/',SearchSchool.as_view()),
-    path('schoolDetail/<int:id>/',SchoolDetail.as_view()),
-    path('schools/<int:id>/vehicles/', VehicleSelectionView.as_view(), name='vehicle-selection'),
+    path('SchoolDetail/<int:id>/',SchoolDetail.as_view()),
+    path('Schools/<int:id>/vehicles/', VehicleSelectionView.as_view(), name='vehicle-selection'),
     path('NewLearnerDetail/<int:id>/',LearnerDetailApiview.as_view())
 
 ]

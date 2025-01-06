@@ -716,16 +716,17 @@ class SchoolDetail(APIView):
 
     def get(self, request, id):
         try:
-            school = User.objects.filter(user_type='school', id=id).first()
-            if not school:
-                return Response({'success': False, 'response':{ 'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
+            # Fetch the school profile
+            school_profile = SchoolProfile.objects.filter(user__user_type='school', id=id).select_related('user').first()
+            if not school_profile:
+                return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = SchoolDetailSerializer(school)
-            return Response({'success': True, 'response':{'data': serializer.data}}, status=status.HTTP_200_OK)
+            serializer = SchoolDetailSerializer(school_profile)
+            return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
 
         except Exception as e:
             print("Error=====>", e)
-            return Response({'success': False, 'response':{'message': 'An error occurred while processing the request.'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': False, 'response': {'message': 'An error occurred while processing the request.'}}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VehicleSelectionView(APIView):
