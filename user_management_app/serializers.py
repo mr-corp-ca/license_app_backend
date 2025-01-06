@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle,Package,Service,Lesson
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage
+from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
 
@@ -110,8 +111,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 class UserNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserNotification
-        fields = ['id', 'user', 'status', 'noti_type', 'description'
-]   
+        fields = ['id', 'user', 'status', 'noti_type', 'description']   
         
 
 class LearnerReportSerializer(serializers.ModelSerializer):
@@ -229,3 +229,52 @@ class SchoolProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SchoolProfile
         fields = ['user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']
+
+
+class LearnerSelectedPackageServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name']
+
+
+class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
+    services = serializers.SerializerMethodField()
+    lesson_number = serializers.SerializerMethodField()
+    package_name = serializers.CharField(source='package.name', read_only=True)
+
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'package', 'package_name','services', 'lesson_number']
+
+    def get_services(self, obj):
+        return LearnerSelectedPackageServiceSerializer(obj.package.services.all(), many=True).data
+
+    def get_lesson_number(self, obj):
+        if obj.package:
+            return obj.package.lesson_numbers
+        else:
+            return 0
+
+class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model =  LearnerBookingSchedule
+        fields = ['id','road_test','road_test_date','road_test_time','special_lesson','hire_car','hire_car_date','hire_car_time']
+
+class LearnerDetailSerializer(serializers.ModelSerializer):
+    package = serializers.SerializerMethodField()
+    booking_schedule = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id','user_type','full_name', 'email', 'dob', 'license_number', 'address', 'phone_number', 'package', 'booking_schedule']
+
+    def get_package(self, obj):
+        user = self.context.get('user')
+        package = LearnerSelectedPackage.objects.filter(user=obj, package__user=user).first()
+        return LearnerSelectedPackageSerializer(package).data if package else None
+    
+    def get_booking_schedule(self, obj):
+        user = self.context.get('user')
+        booking = LearnerBookingSchedule.objects.filter(user=obj, vehicle__user=user).first()
+        return LearnerBookingScheduleSerializer(booking).data if booking else None
