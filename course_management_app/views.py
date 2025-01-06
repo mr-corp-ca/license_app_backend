@@ -12,6 +12,7 @@ from user_management_app.models import User
 from rest_framework.authentication import TokenAuthentication
 from django_filters.rest_framework import DjangoFilterBackend
 from course_management_app.pagination import StandardResultSetPagination
+from timing_slot_app.models import *
 from rest_framework import filters
 import threading
 import json
@@ -351,12 +352,24 @@ class AddVehicleApiView(APIView):
 
 class LearnerListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [AllowAny]
-    queryset = User.objects.filter(user_type='learner')
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        course_status = self.request.query_params.get('course_status', None)
+
+        user = self.request.user
+        school_setting, created = SchoolSetting.objects.get_or_create(user=user)
+        learners = school_setting.learner.all()
+        if course_status == 'completed':
+            learners = learners.filter(courese_status='completed')
+        elif course_status == 'on_going':
+            learners = learners.filter(courese_status='in_progress')
+        return learners
+
     serializer_class = LearnerSelectedPackageSerializer
     pagination_class = StandardResultSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['full_name', 'learner_user__courese_status']
+    search_fields = ['full_name']
     filterset_fields = []
 
 
@@ -431,3 +444,9 @@ class PolicyApiview(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         
+
+class LessonsToday(APIView):
+    def get(self, request):
+        user = request.user
+        user_id = LearnerBookingSchedule.objects.filter(date=datetime.date.today(), vehicle__user=user).values_list('user', flat=True)
+        total_lessons = LearnerSelectedPackage.objects.filter(user__in=user_id)
