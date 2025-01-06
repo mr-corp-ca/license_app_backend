@@ -16,6 +16,7 @@ class MonthlySchedule(BaseModelWithCreatedInfo):
     lesson_gap = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Lesson gap in minutes')
     lesson_duration = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Lesson duration in hours')
     shift_timing = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Shift timing in hours')
+    operation_hour = models.PositiveIntegerField(null=True, blank=True, default=0, help_text='Operation time in hours')
 
     class Meta:
         unique_together = ('user', 'date')
@@ -33,8 +34,12 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     longitude =  models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
     date = models.DateField()
     road_test = models.BooleanField(default= False)
+    road_test_date= models.DateField(null=True, blank=True)
+    road_test_time = models.TimeField(null=True, blank=True) 
     special_lesson = models.BooleanField(default= False)
     hire_car = models.BooleanField(default= False)
+    hire_car_date = models.DateField(null=True,  blank=True)
+    hire_car_time = models.TimeField(null=True, blank=True)
     slot = models.TimeField(null=True,blank=True)
     class Meta:
         unique_together = ('user', 'date')

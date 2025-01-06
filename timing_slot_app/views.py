@@ -5,7 +5,7 @@ from rest_framework import status
 from decimal import Decimal
 from datetime import date
 from course_management_app.models import Vehicle
-from timing_slot_app.constants import get_day_name, get_schedule_times
+from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times
 from utils_app.models import Location,Radius
 from user_management_app.models import Wallet,TransactionHistroy
 from datetime import datetime, timedelta
@@ -20,25 +20,49 @@ class MonthlyScheduleAPIView(APIView):
         serializer = MonthlyScheduleSerializer(data=request.data, many=True)
         if serializer.is_valid():
             for item in serializer.validated_data:
+                start_time = item['start_time']
+                operation_hour = item['operation_hour']
+                lesson_duration = item['lesson_duration']
+                lesson_gap = item['lesson_gap']
+                launch_break_start = item.get('launch_break_start')
+                launch_break_end = item.get('launch_break_end')
+                extra_space_start = item.get('extra_space_start')
+                extra_space_end = item.get('extra_space_end')
+                
+                end_time = calculate_end_time(
+                    start_time,
+                    operation_hour,
+                    lesson_duration,
+                    lesson_gap,
+                    launch_break_start,
+                    launch_break_end,
+                    extra_space_start,
+                    extra_space_end
+                )
+                
+                item['end_time'] = end_time
                 item['user'] = request.user
+                
                 schedule, created = MonthlySchedule.objects.update_or_create(
                     user=request.user, 
                     date=item['date'], 
                     defaults=item
                 )
+                
             return Response(
                 {"success": True, "response": {"data": serializer.data}},
                 status=status.HTTP_201_CREATED
             )
         else:
-            first_error = serializer.errors[0] 
-            first_field, errors = next(iter(first_error.items()))
+            first_error = next(iter(serializer.errors.items())) 
+            first_field, errors = first_error
             formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
             first_error_message = f"{formatted_field} is required!" 
             return Response(
                 {'success': False, 'response': {'message': first_error_message}},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
     def get(self, request):
         user = request.user
@@ -76,20 +100,10 @@ class LearnerMonthlyScheduleView(APIView):
                 booked_slots = LearnerBookingSchedule.objects.filter(vehicle_id=vehicle_id).values_list("slot", flat=True)
 
                 booked_slots = [slot.strftime("%H:%M") for slot in booked_slots]
-                # available_times = get_schedule_times(monthly_schedules)
 
                 available_slots = []
                 for schedule in monthly_schedules:
-                #     start_time = schedule.start_time
-                #     end_time = schedule.end_time
-                #     lunch_break_start = schedule.launch_break_start
-                #     lunch_break_end = schedule.launch_break_end
-
-                #     if start_time.strftime("%H:%M") not in booked_slots and \
-                #         (not lunch_break_start or start_time < lunch_break_start or start_time >= lunch_break_end) and \
-                #         start_time != end_time:
                     available_slots.append({'slot':get_schedule_times(schedule), 'date':schedule.date, 'day_name':get_day_name(schedule.date)})
-            
 
 
                 return Response({

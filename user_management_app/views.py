@@ -823,3 +823,20 @@ class InstructorDashboardAPIView(APIView):
         total_courses = Course.objects.filter(user=user).count()
         total_vehicles = Vehicle.objects.filter(user=user).count()
 
+class LearnerDetailApiview(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request,id):
+        try:
+            user = request.user
+            learner = User.objects.filter(id=id).first()
+            if not learner:
+                return Response({'success':False, 'response':{'message': 'Learner not found.'}},status=status.HTTP_404_NOT_FOUND)
+            serializer = LearnerDetailSerializer(learner, context={'user': user})
+            return Response({'success': True, 'response':{'data': serializer.data}}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'response':{'message': 'An error occurred while processing the request.'},
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
