@@ -62,3 +62,23 @@ def get_schedule_times(schedule):
 
     return available_times
 
+
+
+def calculate_end_time(start_time, operation_hour, lesson_duration, lesson_gap, 
+                        launch_break_start, launch_break_end, extra_space_start, extra_space_end):
+    end_time = (datetime.combine(datetime.today(), start_time) + timedelta(hours=operation_hour)).time()
+    current_time = start_time
+    
+    while current_time < end_time:
+        lesson_end = (datetime.combine(datetime.today(), current_time) + timedelta(hours=lesson_duration)).time()
+        
+        if launch_break_start and launch_break_start <= current_time < launch_break_end:
+            current_time = launch_break_end
+            continue
+        if extra_space_start and extra_space_start <= current_time < extra_space_end:
+            current_time = extra_space_end
+            continue
+        
+        current_time = (datetime.combine(datetime.today(), lesson_end) + timedelta(minutes=lesson_gap)).time()
+    
+    return current_time
