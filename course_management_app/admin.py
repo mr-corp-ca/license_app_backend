@@ -7,7 +7,7 @@ from course_management_app.models import Course, DiscountOffer, Lesson, Package,
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = ('price', 'lesson_numbers', 'user', 'created_at')
-    fields = ['user','lesson','price', 'lesson_numbers','description','refund_policy']
+    fields = ['user','lesson','price', 'lesson_numbers','description','refund_policy','service']
     search_fields = ('lesson__title', 'price', 'lesson_numbers', 'user__username', 'user__full_name', 'user__email', 'user__first_name', 'user__last_name')
     list_filter = ('created_at',)  
     ordering = ('-created_at',)
