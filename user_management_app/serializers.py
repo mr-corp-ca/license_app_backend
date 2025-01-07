@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle,Package,Service,Lesson, LicenseCategory, LearnerSelectedPackage, SchoolRating
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating
+
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
@@ -161,74 +162,111 @@ class SchoolSerializer(serializers.ModelSerializer):
 class GetLessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['id','title']
+        fields = ['id','title','image']
 
 class GetServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ['id', 'name']
 class GetCourseSerializer(serializers.ModelSerializer):
-    services = GetServiceSerializer(many=True)
     lesson = serializers.SerializerMethodField()
-
+    service = serializers.SerializerMethodField()
     class Meta:
         model = Course
-        fields = ['id', 'title', 'price', 'lesson_numbers', 'services', 'refund_policy','lesson']
+        fields = ['id', 'description','refund_policy','lesson','price','service']
     
     def get_lesson(self, instance):
-        lesson = Lesson.objects.filter(course=instance)
-        return GetLessonSerializer(lesson, many=True).data
+        lessons = instance.lesson.all()  
+        return GetLessonSerializer(lessons, many=True).data
 
-class GetVehicleSerializer(serializers.ModelSerializer):
+    def get_service(self, instance):
+        services = instance.service.all() 
+        return GetServiceSerializer(services, many=True).data
+
+class GetSchoolRatingSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Vehicle
-        fields = ['id', 'name', 'vehicle_model']
+        model = SchoolRating
+        fields = ['id','rating']
 
 class GetReviewSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.full_name')
-
+    user_name = serializers.CharField(source='user.username')
+    user_piture = serializers.SerializerMethodField()
+    # rating = serializers.SerializerMethodField()
     class Meta:
         model = Review
-        fields = ['id', 'user_name', 'rating','feedback']
-
+        fields = ['id','user_name', 'user_piture','rating','feedback']
+    
+    def get_user_piture(self, obj):
+        if obj.user and obj.user.logo:  # Check if user and logo exist
+            return obj.user.logo.url  # Return the URL of the logo
+        return None
+    # def get_rating(self, obj):
+    #     reviews = Review.objects.filter(user=obj.user)  
+    #     avg_review_rating = reviews.aggregate(avg_rating=Avg('rating'))['avg_rating']
+    #     return avg_review_rating
+    
 class PlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
         fields = ['id', 'name', 'price','lesson_numbers','total_course_hour','free_pickup']
 
 class SchoolDetailSerializer(serializers.ModelSerializer):
-    courses = serializers.SerializerMethodField()
-    vehicles = serializers.SerializerMethodField()
-    reviews = serializers.SerializerMethodField()
+    course = serializers.SerializerMethodField()
+    license_category = serializers.SerializerMethodField()
+    # reviews = serializers.SerializerMethodField()
     plans = serializers.SerializerMethodField()
-    rating = serializers.SerializerMethodField()
-
+    # review_count = serializers.SerializerMethodField()
+    school_rating = serializers.SerializerMethodField() 
     class Meta:
-        model = User
+        model = SchoolProfile
         fields = [
-            'id', 'full_name', 'address', 'logo', 'rating', 
-            'courses', 'vehicles', 'reviews', 'plans'
+            'institute_name', 'school_rating', 'course', 'license_category',
+            'plans',
         ]
+    
+    def get_license_category(self, obj):
+        categories = obj.license_category.all()
+        return [{'id': category.id, 'name': category.name} for category in categories]
 
-    def get_courses(self, obj):
-        courses = obj.course_user.all()
-        return GetCourseSerializer(courses, many=True).data
-
-    def get_vehicles(self, obj):
-        vehicles = obj.user_vehicle.all()
-        return GetVehicleSerializer(vehicles, many=True).data
+    
+    def get_course(self, obj):
+        course = Course.objects.filter(user=obj.user).first()
+        return GetCourseSerializer(course).data
 
     def get_reviews(self, obj):
-        reviews = obj.review_set.all()
-        return GetReviewSerializer(reviews, many=True).data
-
+        reviews = Review.objects.filter(user=obj.user)
+        
+        if reviews:
+            return GetReviewSerializer(reviews, many=True).data
+        else:
+            return None
+    
+    # def get_review_count(self,obj):
+    #     review_count = Review.objects.filter(user=obj.user).count()
+    #     return review_count
+    
     def get_plans(self, obj):
-        plans = obj.package_user.all() 
+        plans = Package.objects.filter(user=obj.user) 
         return PlanSerializer(plans, many=True).data
 
-    def get_rating(self, obj):
-        return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)
-    
+    def get_school_rating(self, obj):
+        school_ratings = SchoolRating.objects.filter(course__user=obj.user)
+        
+        avg_rating = school_ratings.aggregate(avg_rating=Avg('rating'))['avg_rating']
+        avg_rating = round(avg_rating, 1) if avg_rating is not None else None
+
+        first_review = Review.objects.filter(user=obj.user).first()
+        
+        first_review_data = GetReviewSerializer(first_review).data if first_review else None
+        
+        school_reviews_count = Review.objects.filter(user=obj.user).count()
+        
+        return {
+            'school_avg_rating': avg_rating,
+            'review': first_review_data,
+            'reviews_count': school_reviews_count
+        }
+
 
 class VehicleDetailSerializer(serializers.ModelSerializer):
     class Meta:

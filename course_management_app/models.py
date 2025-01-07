@@ -27,7 +27,8 @@ class Course(BaseModelWithCreatedInfo):
     lesson_numbers = models.PositiveIntegerField()
     refund_policy = models.TextField(blank=True, null=True)
     # course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
-
+    service = models.ManyToManyField(Service, related_name='course_service', default=None)
+    
     def __str__(self):
         return self.user.username
 
