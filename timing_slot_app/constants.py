@@ -82,3 +82,8 @@ def calculate_end_time(start_time, operation_hour, lesson_duration, lesson_gap,
         current_time = (datetime.combine(datetime.today(), lesson_end) + timedelta(minutes=lesson_gap)).time()
     
     return current_time
+
+def validate_even_or_odd(operation_hour: int, lesson_duration: int):
+    if operation_hour % 2 != lesson_duration % 2:
+        raise ValueError("Operation hour and lesson duration must both be even or both odd.")
+    return True

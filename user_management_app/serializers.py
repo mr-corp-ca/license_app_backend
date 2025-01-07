@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, SchoolRating
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating
+
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
@@ -56,6 +57,16 @@ class SchoolUserSerializer(serializers.ModelSerializer):
             return ProvinceSerializer(instance.province).data
         else:
             return None
+class LicenseCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LicenseCategory
+        fields = ['id', 'name']
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name']
+
 
 class SchoolUserSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
@@ -315,3 +326,22 @@ class LearnerDetailSerializer(serializers.ModelSerializer):
         user = self.context.get('user')
         booking = LearnerBookingSchedule.objects.filter(user=obj, vehicle__user=user).first()
         return LearnerBookingScheduleSerializer(booking).data if booking else None
+
+class SchoolRatingSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    class Meta:
+        model = Review
+        fields = ['id', 'logo', 'full_name', 'rating', 'feedback']
+    def get_logo(self,obj):
+       if obj.user.logo:
+            logo = obj.user.logo
+            return logo
+       else:
+            return None
+    def get_full_name(self,obj):
+        if obj.user.full_name:
+            full_name = obj.user.full_name
+            return full_name
+        else:
+            return None

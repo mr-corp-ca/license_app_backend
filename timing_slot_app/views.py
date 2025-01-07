@@ -5,7 +5,7 @@ from rest_framework import status
 from decimal import Decimal
 from datetime import date
 from course_management_app.models import Vehicle
-from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times
+from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd
 from utils_app.models import Location,Radius
 from user_management_app.models import Wallet,TransactionHistroy
 from datetime import datetime, timedelta
@@ -20,6 +20,18 @@ class MonthlyScheduleAPIView(APIView):
         serializer = MonthlyScheduleSerializer(data=request.data, many=True)
         if serializer.is_valid():
             for item in serializer.validated_data:
+                try:
+                    validate_even_or_odd(int(item['operation_hour']), int(item['lesson_duration']))
+                except ValueError as e:
+                    return Response(
+                        {
+                            'success': False,
+                            'response': {'message': str(e)}
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Other logic remains unchanged
                 start_time = item['start_time']
                 operation_hour = item['operation_hour']
                 lesson_duration = item['lesson_duration']
@@ -28,7 +40,6 @@ class MonthlyScheduleAPIView(APIView):
                 launch_break_end = item.get('launch_break_end')
                 extra_space_start = item.get('extra_space_start')
                 extra_space_end = item.get('extra_space_end')
-                
                 end_time = calculate_end_time(
                     start_time,
                     operation_hour,
@@ -62,7 +73,6 @@ class MonthlyScheduleAPIView(APIView):
                 {'success': False, 'response': {'message': first_error_message}},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
 
     def get(self, request):
         user = request.user
@@ -159,6 +169,8 @@ class LearnerMonthlyScheduleView(APIView):
     def process_booking(self, user, data):
         try:
             selected_location = data.get('selected_location')
+            hire_car_time = data.get('hire_car_time')
+            hire_car = data.get('hire_car')
             current_location = data.get('current_location', False)
             current_date = date.today()
             date_str = data.get('date')
@@ -180,7 +192,24 @@ class LearnerMonthlyScheduleView(APIView):
                     'success': False,
                     'message': f"The date should be earlier than {last_monthly_obj.date.strftime('%Y-%m-%d')}"
                 }
-
+            vehicle = Vehicle.objects.filter(id=data.get('vehicle_id')).first()
+            if not vehicle:
+                return {'success': False, 'message': 'Vehicle not found.'}
+            
+            if hire_car:
+                monthly_schedules = MonthlySchedule.objects.filter(vehicle=vehicle)
+                booked_slots = LearnerBookingSchedule.objects.filter(vehicle=vehicle).values_list("slot", flat=True)
+                booked_slots = [slot.strftime("%H:%M") for slot in booked_slots]
+                available_slots = []
+                for schedule in monthly_schedules:
+                    available_slots.append({'slot':get_schedule_times(schedule), 'date':schedule.date, 'day_name':get_day_name(schedule.date)})
+                
+                is_slot_available = any(hire_car_time == slot['slot'] for slot in available_slots)
+                if not is_slot_available:
+                    return {'success': False, 'message': 'Slot not avaible request for special class!'}
+                
+                # Pending Payment
+                
             if not selected_location:
                 return {'success': False, 'message': 'Please select a location.'}
 
@@ -217,9 +246,7 @@ class LearnerMonthlyScheduleView(APIView):
                 current_location_latitude = location.latitude
                 current_location_longitude = location.longitude
 
-            vehicle = Vehicle.objects.filter(id=data.get('vehicle_id')).first()
-            if not vehicle:
-                return {'success': False, 'message': 'Vehicle not found.'}
+
 
             LearnerBookingSchedule.objects.update_or_create(
                 user=user,
@@ -229,8 +256,13 @@ class LearnerMonthlyScheduleView(APIView):
                     'location': selected_location,
                     'latitude': current_location_latitude,
                     'longitude': current_location_longitude,
-                    'slot': data.get('slot'),
                     'road_test': data.get('road_test', False),
+                    'hire_car': data.get('hire_car', False),
+                    'road_test_date': data.get('road_test_date') if data.get('road_test_date') else None,
+                    'road_test_time': data.get('road_test_time') if data.get('road_test_time') else None,
+                    'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
+                    'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
+                    'slot': data.get('slot'),
                 }
             )
 

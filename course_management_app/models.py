@@ -9,8 +9,14 @@ from utils_app.models import BaseModelWithCreatedInfo
 class LicenseCategory(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.name
+    
 class Service(BaseModelWithCreatedInfo):
     name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
 
 class Course(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user')
