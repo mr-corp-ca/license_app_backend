@@ -859,9 +859,12 @@ class LearnerDetailApiview(APIView):
 class SchoolRatingListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [AllowAny]
-    queryset = User.objects.filter(user_type='learner')
+
+    queryset = Review.objects.filter(user__user_type='learner')
+    
     serializer_class = SchoolRatingSerializer
     pagination_class = StandardResultSetPagination
+    
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = []
     filterset_fields = []
