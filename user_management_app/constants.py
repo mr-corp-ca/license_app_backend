@@ -2,8 +2,6 @@ import random
 import string
 from twilio.rest import Client
 from django.conf import settings 
-import pywhatkit as kit
-
 
 
 def create_slug_for_store(name):
