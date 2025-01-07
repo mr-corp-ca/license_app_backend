@@ -56,6 +56,7 @@ class SchoolUserSerializer(serializers.ModelSerializer):
             return ProvinceSerializer(instance.province).data
         else:
             return None
+
 class LicenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = LicenseCategory
