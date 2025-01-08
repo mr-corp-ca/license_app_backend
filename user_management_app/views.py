@@ -865,3 +865,97 @@ class SchoolRatingListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = []
     filterset_fields = []
+
+class PaymentDetailView(APIView):
+    def get(self, request, id):
+        try:
+            user = request.user
+
+            school_profile = SchoolProfile.objects.filter(id=id).first()
+            if not school_profile:
+                return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = PaymentDetailSerializer(school_profile, context={'user': user})
+            return Response({'success': True, 'response':{'data': serializer.data}}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'response':{'message': 'An error occurred while processing the request.'},
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentRequestView(APIView):
+    def post(self, request):
+        try:
+            user = request.user
+            data = request.data
+            package_id = data.get('package_id')
+            payment_method = data.get('payment_method')
+
+            if payment_method not in ['stripe', 'direct_cash']:
+                return Response({'success': False, 'response': {'message': 'Invalid payment method.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+            package = LearnerSelectedPackage.objects.filter(user=user, package_id=package_id).first()
+            if not package:
+                return Response({'success': False, 'response': {'message': 'Package not found.'}}, status=status.HTTP_404_NOT_FOUND)
+
+            # Calculate GST and total price
+            package_price = package.package.price
+            gst_rate = 0.05
+            gst_amount = round(package_price * gst_rate, 2)
+            total_price = round(package_price + gst_amount, 2)
+
+            wallet = Wallet.objects.filter(user=user).first()
+            if not wallet:
+                return Response({'success': False, 'response': {'message': 'Wallet not found.'}}, status=status.HTTP_404_NOT_FOUND)
+
+            transaction = TransactionHistroy.objects.create(
+                wallet=wallet,
+                amount=total_price,
+                transaction_type=payment_method,
+                transaction_status='pending'
+            )
+
+            if payment_method == 'stripe':
+                payment_successful = True  
+                if payment_successful:
+                    transaction.transaction_status = 'accepted'
+                else:
+                    transaction.transaction_status = 'rejected'
+                transaction.save()
+
+                response_data = {
+                    'transaction_id': transaction.id,
+                    'amount': transaction.amount,
+                    'transaction_type': transaction.transaction_type,
+                    'transaction_status': transaction.transaction_status,
+                    'package_price': package_price,
+                    'gst_amount': f"{gst_amount}%",
+                    'total_price': total_price,
+                    'message': 'Stripe payment processed successfully.' if payment_successful else 'Stripe payment failed.'
+                }
+                return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
+
+            elif payment_method == 'direct_cash':
+                transaction.save()
+
+                response_data = {
+                    'transaction_id': transaction.id,
+                    'amount': transaction.amount,
+                    'transaction_type': transaction.transaction_type,
+                    'transaction_status': transaction.transaction_status,
+                    'package_price': package_price,
+                    'gst_amount': f"{gst_amount}%",
+                    'total_price': total_price,
+                    'message': 'Direct cash payment request created successfully. Please wait for approval.'
+                }
+                return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'response': {'message': 'An error occurred while processing the payment.'},
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)

@@ -132,8 +132,9 @@ class Wallet(BaseModelWithCreatedInfo):
 
 class TransactionHistroy(BaseModelWithCreatedInfo):
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_CHOICES)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    transaction_type = models.CharField(max_length=15, choices=TRANSACTION_CHOICES)
+    transaction_status = models.CharField(max_length=15, choices=TRANSACTION_STATUS, default='pending')
 
     def __str__(self):
         return f"{self.transaction_type} of {self.amount} to {self.wallet.user.username} Wallet"
@@ -141,6 +142,7 @@ class TransactionHistroy(BaseModelWithCreatedInfo):
 
 class UserNotification(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    transactionhistory = models.ForeignKey(TransactionHistroy, null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=255, choices=STATUS_CHOICES)
     noti_type = models.CharField(max_length=255, choices=NOTIFICATION_TYPE_CHOICES) 
     description = models.TextField() 

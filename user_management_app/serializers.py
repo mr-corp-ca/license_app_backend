@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating,LicenseCategory
 
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
@@ -259,7 +259,6 @@ class SchoolDetailSerializer(serializers.ModelSerializer):
         first_review_data = GetReviewSerializer(first_review).data if first_review else None
         
         school_reviews_count = Review.objects.filter(user=obj.user).count()
-        
         return {
             'school_avg_rating': avg_rating,
             'review': first_review_data,
@@ -289,10 +288,11 @@ class LearnerSelectedPackageSerializer(serializers.ModelSerializer):
     services = serializers.SerializerMethodField()
     lesson_number = serializers.SerializerMethodField()
     package_name = serializers.CharField(source='package.name', read_only=True)
+    package_price = serializers.CharField(source='package.price', read_only=True)
 
     class Meta:
         model = LearnerSelectedPackage
-        fields = ['id', 'package', 'package_name','services', 'lesson_number']
+        fields = ['id', 'package', 'package_name','package_price', 'services', 'lesson_number']
 
     def get_services(self, obj):
         return LearnerSelectedPackageServiceSerializer(obj.package.services.all(), many=True).data
@@ -345,3 +345,61 @@ class SchoolRatingSerializer(serializers.ModelSerializer):
             return full_name
         else:
             return None
+        
+class LearnerSelectedSchoolPackageSerializer(serializers.ModelSerializer):
+    lesson_number = serializers.SerializerMethodField()
+    package_name = serializers.CharField(source='package.name', read_only=True)
+    package_price = serializers.CharField(source='package.price', read_only=True)
+
+    class Meta:
+        model = LearnerSelectedPackage
+        fields = ['id', 'package_name','package_price', 'lesson_number']
+
+
+    def get_lesson_number(self, obj):
+        if obj.package:
+            return obj.package.lesson_numbers
+        else:
+            return 0
+class PaymentDetailSerializer(serializers.Serializer):
+    package = serializers.SerializerMethodField()
+    school_rating = serializers.SerializerMethodField()
+    license_category = serializers.SerializerMethodField()
+    learner_count = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = SchoolProfile
+        fields = ['id','institute_name', 'license_categories', 'package', 'learner_count', 'school_rating']
+    
+    def get_license_category(self, obj):
+        categories = obj.license_category.all()
+        return [{'id': category.id, 'name': category.name} for category in categories]
+
+    def get_package(self, obj):
+        user = self.context.get('user')
+        
+        package = LearnerSelectedPackage.objects.filter(user=user, package__user=obj.user).first()
+
+        if package:
+            package_price = package.package.price
+            
+            gst_rate = 0.05
+            gst_amount = round(package_price * gst_rate)
+
+            price_with_gst = round(package_price + gst_amount, 2)
+
+            package_data = LearnerSelectedSchoolPackageSerializer(package).data
+            package_data['gst_amount'] = f"+{gst_amount}%"
+            package_data['price_with_gst'] = price_with_gst
+            package_data['base_price'] = package_price
+
+            return package_data
+        return None
+
+    def get_school_rating(self, obj):
+        school_ratings = SchoolRating.objects.filter(course__user=obj.user)
+        avg_rating = school_ratings.aggregate(avg_rating=Avg('rating'))['avg_rating']
+        return round(avg_rating, 1) if avg_rating is not None else None
+
+    def get_learner_count(self, obj):
+        return LearnerSelectedPackage.objects.filter(package__user=obj.user).count() 
