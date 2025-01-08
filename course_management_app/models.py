@@ -129,8 +129,6 @@ class LearnerSelectedPackage(BaseModelWithCreatedInfo):
     start_date = models.DateField(null=True, blank=True)
     courese_status = models.CharField(max_length=255, choices=COURSE_STATUS_CHOICES, default='on-going')
 
-
-
 class SchoolRating(BaseModelWithCreatedInfo):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_rating')
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='course_user_rating')
@@ -140,7 +138,11 @@ class SchoolRating(BaseModelWithCreatedInfo):
     start_date = models.DateField(null=True, blank=True)
 
 
-
 class GeneralPolicy(BaseModelWithCreatedInfo):
     about = models.TextField(null=True, blank=True, verbose_name='About')    
     refund_policy = models.TextField(null=True, blank=True,verbose_name='Refund_Policy')
+
+
+class InstructorLesson(BaseModelWithCreatedInfo):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="instructor_lessons")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="instructor_lessons")

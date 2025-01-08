@@ -2,6 +2,7 @@ from .models import *
 from .serializers import *
 from django.db.models import Q
 from rest_framework import status
+from datetime import date
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -445,8 +446,39 @@ class PolicyApiview(APIView):
             )
         
 
-class LessonsToday(APIView):
+class InstructorLessonsAPIView(APIView):
     def get(self, request):
-        user = request.user
-        user_id = LearnerBookingSchedule.objects.filter(date=datetime.date.today(), vehicle__user=user).values_list('user', flat=True)
-        total_lessons = LearnerSelectedPackage.objects.filter(user__in=user_id)
+        try:
+            user = request.user
+            print("----------------->",user)
+            status_filter = request.query_params.get('status', 'today')
+            today = date.today()
+
+            # lessons = LearnerSelectedPackage.objects.filter(user__user_type='learner').first()
+            # course_status = learner_selected_package.courese_status if learner_selected_package else None
+            # print("------------------>",course_status)
+            lessons = LearnerBookingSchedule.objects.filter(vehicle__user=user)
+            if status_filter == 'today':
+                lessons = lessons.filter(date=today)
+
+            elif status_filter == 'upcoming':
+                lessons = lessons.filter(date__gt=today)
+
+            elif status_filter == 'completed':
+
+                    lessons = lessons.filter(
+                        date__lt=today, is_completed=True
+                    )
+
+            serializer = LearnerBookingScheduleSerializer(lessons, many=True)
+
+            return Response(
+                {"success": True, "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+        
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": f"An error occurred: {str(e)}"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

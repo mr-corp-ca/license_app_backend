@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from .models import *
+from django.utils.timezone import localtime
 from driving_license import settings
-from user_management_app.models import*
+from user_management_app.models import *
+from timing_slot_app.models import *
+
 class DiscountOfferUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -307,3 +310,28 @@ class GeneralPolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneralPolicy
         fields = ['id', 'about', 'refund_policy']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name']  
+
+class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
+    user = UserSerializer() 
+    date = serializers.DateField(format="%Y-%m-%d")
+    slot = serializers.TimeField(format="%H:%M:%S")  
+    # is_completed = serializers.BooleanField()
+
+    class Meta:
+        model = LearnerBookingSchedule
+        fields = ['id', 'user', 'date', 'slot']  
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['date'] = instance.date.strftime("%Y-%m-%d")  
+        if instance.slot:
+            representation['slot'] = instance.slot.strftime("%H:%M:%S")
+        return representation
+    
+
