@@ -89,14 +89,20 @@ class CourseApiView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        lessons = request.data.get('lessons', None)
         serializer = SingleCourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
             course = serializer.save()
+
+            if lessons is not None:
+                course.lesson.set(lessons)
+
             return Response(
                 {"success": True, "response": {"data": GETSingleCourseSerializer(course).data}},
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
     def get(self, request):
@@ -480,5 +486,37 @@ class InstructorLessonsAPIView(APIView):
         except Exception as e:
             return Response(
                 {"status": False, "response": {"message": f"An error occurred: {str(e)}"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    def put(self, request, *args, **kwargs):
+        try:
+            lesson_id = request.data.get('id')
+            lesson_name = request.data.get('lesson_name')
+
+            if not lesson_id or not lesson_name:
+                return Response(
+                    {"success": False, "message": "Lesson ID and lesson name are required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            lesson = LearnerBookingSchedule.objects.filter(id=lesson_id).first()
+            if not lesson:
+                return Response(
+                    {"success": False, "message": "Lesson not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Update the lesson name
+            lesson.lesson_name = lesson_name
+            lesson.save()
+
+            return Response(
+                {"success": True, "message": "Lesson name updated successfully."},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )

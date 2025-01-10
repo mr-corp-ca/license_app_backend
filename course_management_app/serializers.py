@@ -330,7 +330,7 @@ class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LearnerBookingSchedule
-        fields = ['id', 'user', 'date', 'slot']  
+        fields = ['id', 'user', 'date', 'slot','lesson_name']  
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

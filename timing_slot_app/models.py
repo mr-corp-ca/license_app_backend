@@ -42,6 +42,7 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     hire_car_time = models.TimeField(null=True, blank=True)
     slot = models.TimeField(null=True,blank=True)
     is_completed = models.BooleanField(default=False)
+    lesson_name =  models.TextField(blank=True, null=True, default='Lesson')
     class Meta:
         unique_together = ('user', 'date')
     
