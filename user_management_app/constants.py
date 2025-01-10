@@ -62,6 +62,12 @@ TRANSACTION_CHOICES = [
     ('withdraw', 'Withdraw')
     ]
 
+TRANSACTION_STATUS = [
+    ('pending', 'Pending'), 
+    ('Accepedt', 'Accepted'),
+    ('rejected', 'Rejected'),
+]
+
 STATUS_CHOICES = [
     ('pending', 'Pending'),
     ('accepted', 'Accepted'),

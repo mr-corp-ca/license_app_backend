@@ -2,6 +2,7 @@ from .models import *
 from .serializers import *
 from django.db.models import Q
 from rest_framework import status
+from datetime import date
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -88,14 +89,20 @@ class CourseApiView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        lessons = request.data.get('lessons', None)
         serializer = SingleCourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
             course = serializer.save()
+
+            if lessons is not None:
+                course.lesson.set(lessons)
+
             return Response(
                 {"success": True, "response": {"data": GETSingleCourseSerializer(course).data}},
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
     def get(self, request):
@@ -445,8 +452,71 @@ class PolicyApiview(APIView):
             )
         
 
-class LessonsToday(APIView):
+class InstructorLessonsAPIView(APIView):
     def get(self, request):
-        user = request.user
-        user_id = LearnerBookingSchedule.objects.filter(date=datetime.date.today(), vehicle__user=user).values_list('user', flat=True)
-        total_lessons = LearnerSelectedPackage.objects.filter(user__in=user_id)
+        try:
+            user = request.user
+            print("----------------->",user)
+            status_filter = request.query_params.get('status', 'today')
+            today = date.today()
+
+            # lessons = LearnerSelectedPackage.objects.filter(user__user_type='learner').first()
+            # course_status = learner_selected_package.courese_status if learner_selected_package else None
+            # print("------------------>",course_status)
+            lessons = LearnerBookingSchedule.objects.filter(vehicle__user=user)
+            if status_filter == 'today':
+                lessons = lessons.filter(date=today)
+
+            elif status_filter == 'upcoming':
+                lessons = lessons.filter(date__gt=today)
+
+            elif status_filter == 'completed':
+
+                    lessons = lessons.filter(
+                        date__lt=today, is_completed=True
+                    )
+
+            serializer = LearnerBookingScheduleSerializer(lessons, many=True)
+
+            return Response(
+                {"success": True, "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+        
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": f"An error occurred: {str(e)}"}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    def put(self, request, *args, **kwargs):
+        try:
+            lesson_id = request.data.get('id')
+            lesson_name = request.data.get('lesson_name')
+
+            if not lesson_id or not lesson_name:
+                return Response(
+                    {"success": False, "message": "Lesson ID and lesson name are required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            lesson = LearnerBookingSchedule.objects.filter(id=lesson_id).first()
+            if not lesson:
+                return Response(
+                    {"success": False, "message": "Lesson not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Update the lesson name
+            lesson.lesson_name = lesson_name
+            lesson.save()
+
+            return Response(
+                {"success": True, "message": "Lesson name updated successfully."},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

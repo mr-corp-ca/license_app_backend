@@ -13,7 +13,10 @@ urlpatterns = [
     path('InstituteDetail/<int:id>/',InstituteApprovaldetailApiView.as_view()),
     path('DrivingSchoolList/',DrivingSchoolListAPIView.as_view()),
     path('SchoolStatusUpdate/<int:id>/',DrivingSchoolAPIView.as_view()),
+    path('AdminAllLessons/', LessonListAPIView.as_view(), name='lesson-list'),
+    path('AdminAddLessons/', AdminAddLessonAPIView.as_view(), name='lesson-detail'),
+    path('AdminUpdateLesson/<int:id>/',AdminUpdateLesson.as_view()),
+    path('AdminDeleteLesson/<int:id>/',AdminDeleteLesson.as_view())
 ]
-    
 
 
