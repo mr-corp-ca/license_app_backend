@@ -4,6 +4,7 @@ from twilio.rest import Client
 from django.conf import settings 
 
 
+
 def create_slug_for_store(name):
     from user_management_app.models import User
     # Generate initial slug

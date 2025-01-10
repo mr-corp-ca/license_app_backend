@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating,LicenseCategory
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory
 
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
@@ -57,6 +57,7 @@ class SchoolUserSerializer(serializers.ModelSerializer):
             return ProvinceSerializer(instance.province).data
         else:
             return None
+
 class LicenseCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = LicenseCategory
