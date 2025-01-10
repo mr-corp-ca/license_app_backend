@@ -219,6 +219,11 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = ['id','title','image']
 
+class AdminLessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = ['id','title','image','is_deleted']
+
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True)
     lesson_details = serializers.SerializerMethodField()

@@ -6,6 +6,7 @@ from course_management_app.models import Course, UserSelectedCourses
 from user_management_app.models import TransactionHistroy, User
 from user_management_app.threads import send_push_notification
 from .models import *
+from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import *
 from itertools import chain
 from course_management_app.serializers import *
@@ -398,3 +399,56 @@ class InstituteApprovaldetailApiView(APIView):
                 {'status': False, 'message': f'An error occurred: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class LessonListAPIView(ListAPIView):
+    queryset = Lesson.objects.all()
+    serializer_class = AdminLessonSerializer
+    pagination_class = StandardResultSetPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        is_deleted = self.request.query_params.get('is_deleted', None)
+
+        if is_deleted == 'true':
+            queryset = queryset.filter(is_deleted=True)
+        elif is_deleted == 'false':
+            queryset = queryset.filter(is_deleted=False)  
+        return queryset
+
+
+class AdminAddLessonAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AdminLessonSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminUpdateLesson(APIView):
+    permission_classes = []
+    def put(self, request, id):
+        try:
+            lesson = Lesson.objects.get(id=id)
+        except Lesson.DoesNotExist:
+            return Response({'status': False, 'message': 'Lesson not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminLessonSerializer(lesson, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminDeleteLesson(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request, id):
+        try:
+            lesson = Lesson.objects.get(id=id)
+        except Lesson.DoesNotExist:
+            return Response({'status': False, 'message': 'Lesson not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        lesson.is_deleted = True
+        lesson.save()
+        return Response({"message": "Lesson deleted successfully."}, status=status.HTTP_200_OK)

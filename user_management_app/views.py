@@ -738,6 +738,7 @@ class SchoolDetail(APIView):
         try:
             # Fetch the school profile
             school_profile = SchoolProfile.objects.filter(user__user_type='school', id=id).select_related('user').first()
+            print("SCHOOL",school_profile)
             if not school_profile:
                 return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
