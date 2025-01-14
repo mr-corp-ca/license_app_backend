@@ -619,16 +619,16 @@ class LearnerReportAPIVIEW(APIView):
 
     def post(self, request):
         user = request.user
-        learner = request.data.get('learner')
-        instructor = request.data.get('instructor')
+        learner = request.data.get('learner_id')
+        instructor = request.data.get('school')
 
         if not learner or not instructor:
             return response({'success':False, 'response':{'messages': 'learner and instructor both required!'}}, status=status.HTTP_400_BAD_REQUEST)
         
         if user.id == learner:
-            user_type = "learner"
+            user_type = "learner_id"
         elif user.id == instructor:
-            user_type = "instructor"
+            user_type = "school"
         else:
             return Response({'success': False, 'response':{'message': 'User must be either learner or instructor in the report.'}}, status=status.HTTP_400_BAD_REQUEST)
 

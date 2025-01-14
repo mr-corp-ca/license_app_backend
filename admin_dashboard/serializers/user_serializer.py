@@ -2,7 +2,7 @@ from admin_dashboard.serializers.utils_serializer import AdminCitySerializer, Ad
 from rest_framework import serializers
 from django.db.models import Avg
 from user_management_app.models import User, SchoolProfile, SchoolSetting,TransactionHistroy
-from course_management_app.models import Course, Package, Vehicle,LicenseCategory, Lesson
+from course_management_app.models import Course, Package, Vehicle,LicenseCategory, Lesson, Service
 from utils_app.models import *
 
 class DefaultAdminUserSerializer(serializers.ModelSerializer):
@@ -90,14 +90,22 @@ class AdminCourseSerializer(serializers.ModelSerializer):
     
     def get_lesson_count(self, obj):
         return obj.lesson.count()
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta :
+        model = Service
+        fields =  ['name']
+
 class PackageSerializer(serializers.ModelSerializer):
+    services = ServiceSerializer(many=True, read_only = True)
     class Meta:
         model = Package
-        fields = ['id', 'name', 'price']  
+        fields = ['id', 'name', 'price','total_course_hour','lesson_numbers','free_pickup','services']
+
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = ['id', 'name', 'vehicle_registration_no'] 
+        fields = ['id', 'name', 'image', 'vehicle_registration_no'] 
 
 class TransactionHistorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,15 +120,14 @@ class SchoolApprovalSerializer(serializers.ModelSerializer):
     course = serializers.SerializerMethodField()
     packages = serializers.SerializerMethodField()
     total_vehicle = serializers.SerializerMethodField()
-    vehicles = VehicleSerializer(many=True, read_only=True)
+    vehicles = VehicleSerializer(source='user_vehicle', many=True, read_only=True)
     payment_methods = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id','full_name', 'logo', 'school_profile', 'email','dob','phone_number', 'address', 'city', 'province', 
-            'user_type', 'total_learner', 'course',
-            'packages', 'total_vehicle', 'vehicles', 'payment_methods'
+            'user_type', 'total_learner', 'course','packages',  'vehicles', 'total_vehicle', 'payment_methods'
         ]
 
     def get_school_profile(self, obj):
