@@ -83,9 +83,22 @@ NOTIFICATION_TYPE_CHOICES = [
     ('general', 'General'),
 ]
 
-REPORT_REASONS = [ 
+INSTRUCTOR_REPORT_REASONS = [ 
     ('waiting-too-long','Waiting too long on a location'), 
     ('misbehaving', 'Misbehaving'), 
     ('abusing', 'Abusing'), 
     ('others', 'Others')
+]
+
+LEARNER_REPORT_RESONS = [
+    ('instructor-communication', 'Instructor Communication'),
+    ('punctuality-and-availability','Punctuality and Availability'),
+    ('teaching-style', 'Teaching Style'),
+    ('professionalism', 'Professionalism'),
+    ('comfort-level-with-instructor','Comfort Level with Instructor')
+]
+
+REPORTER_CHOICES = [
+    ('learner', 'Learner'),
+    ('school', 'School'),
 ]
