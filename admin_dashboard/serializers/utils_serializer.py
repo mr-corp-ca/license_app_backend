@@ -30,8 +30,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id", "username", "full_name","logo","email", "address", "phone_number", "license_number", "dob", "user_type",
-            "selected_package", "lesson_number", "institute_name", "average_rating","learner_rating","feedback", "course_progress","vehicles"
+            "id", "username", "full_name", "logo", "email", "address", "phone_number", "license_number", "dob", "user_type",
+            "selected_package", "lesson_number", "institute_name", "average_rating", "learner_rating", "feedback", "course_progress", "vehicles"
         ]
     
     def get_selected_package(self, obj):

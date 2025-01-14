@@ -268,7 +268,7 @@ class UserProfileView(APIView):
                     "id": user.id,
                     "Institute_name": school_profile.institute_name,
                     "license_category": license_categories,
-                    "full_name" :  user.full_name,
+                    "full_name" :  school_profile.instructor_name,
                     "address": user.address,
                     "email": user.email,
                     "phone_number": user.phone_number,
