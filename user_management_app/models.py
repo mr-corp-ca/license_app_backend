@@ -131,8 +131,10 @@ class Wallet(BaseModelWithCreatedInfo):
 
 
 class TransactionHistroy(BaseModelWithCreatedInfo):
+    school =  models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='School_transaction_History')
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=20, decimal_places=2)
+    payment_method = models.CharField(max_length=20, blank=True, null=True ,choices=TRANSACTION_METHOD)
     transaction_type = models.CharField(max_length=15, choices=TRANSACTION_CHOICES)
     transaction_status = models.CharField(max_length=15, choices=TRANSACTION_STATUS, default='pending')
 

@@ -23,7 +23,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image']
+        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
 
 
 class GETCourseSerializer(serializers.ModelSerializer):
@@ -32,7 +32,7 @@ class GETCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields =[ 'id', 'user','description', 'price', 'lesson_numbers', 'refund_policy', 'course_cover_image', 'services', 'license_category']
+        fields =[ 'id', 'user','description', 'price', 'lesson_numbers', 'refund_policy', 'services', 'license_category']
     
     def get_license_category(self, instance):
         license_category = instance.license_category.all()

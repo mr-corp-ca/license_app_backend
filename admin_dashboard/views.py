@@ -1,13 +1,16 @@
-import threading
-import calendar
 from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
-from admin_dashboard.serializers.course_serializer import AdminGETCourseSerializer,SchoolApprovalSerializer,AdminDrivingSchoolListSerializer
-from course_management_app.models import Course, UserSelectedCourses
+from admin_dashboard.serializers.course_serializer import AdminDrivingSchoolListSerializer
+from course_management_app.models import Course
 from user_management_app.models import TransactionHistroy, User
 from user_management_app.threads import send_push_notification
 from .models import *
+
+from django.db.models import Avg
 from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import *
+from admin_dashboard.serializers.course_serializer import AdminCourseSerializer
+from admin_dashboard.serializers.utils_serializer import UserProfileSerializer
+from admin_dashboard.serializers.user_serializer import SchoolApprovalSerializer
 from itertools import chain
 from course_management_app.serializers import *
 from django.db.models import Q
@@ -16,7 +19,6 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from rest_framework.generics import ListAPIView
 from admin_dashboard.pagination import StandardResultSetPagination
@@ -216,7 +218,7 @@ class AdminIncomeGraphAPIView(APIView):
 class AdminUserListView(ListAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = User.objects.filter(Q(user_type='learner') | Q(user_type='instructor')).order_by('-date_joined')
+    queryset = User.objects.filter(Q(user_type='learner') | Q(user_type='school')).order_by('-date_joined')
     serializer_class = AdminUserGetSerializer
     pagination_class = StandardResultSetPagination
 
@@ -233,60 +235,58 @@ class UserProfileView(APIView):
         user = User.objects.filter(id=id).first()
         if not user:
             return Response({'status':False,'message':'User not found.'},status=status.HTTP_404_NOT_FOUND)
-        user_profile_courses, created = UserSelectedCourses.objects.get_or_create(
-            user=user,
-        )
-        
         if user.user_type == 'learner':
-            courses = user_profile_courses.courses.all()
-            packages = Package.objects.filter(user=user)
-            vehicles = Vehicle.objects.filter(user=user)
+            serializer = UserProfileSerializer(user)
+            return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+        
+        elif user.user_type == 'school':
+                course = Course.objects.filter(user=user).first()
 
-            # Serialize data
-            user_data = {
-                "id": user.id,
-                "username": user.username,
-                "full_name": user.full_name,
-                "email": user.email,
-                "address" : user.address,
-                "phone_number": user.phone_number,
-                "dob": user.dob,
-                "user_type": user.user_type,
-                "logo": user.logo.url if user.logo else None,
-                "course": AdminGETCourseSerializer(courses, many=True).data,
-                "packages": GETPackageSerializer(packages, many=True).data,
-                "vehicles": VehicleSerializer(vehicles, many=True).data,
-            }
+                school_setting = SchoolSetting.objects.filter(user=user).first()
+                learners = school_setting.learner.all() if school_setting else []
+                total_learner = len(learners)
 
-            return Response(user_data)
-        elif user.user_type == 'instructor':
-            ids = Course.objects.filter(user=user).values_list('id',flat=True)
-            total_learner = UserSelectedCourses.objects.filter(id__in=ids).count()
-            packages = Package.objects.filter(user=user)
-            total_lesson = Lesson.objects.filter(course__user=user).count()
-            vehicles = Vehicle.objects.filter(user=user)
-            course = Course.objects.filter(user=user)
-            total_vehicle = vehicles.count()
-            user_data = {
-                "id": user.id,
-                "username": user.username,
-                "full_name": user.full_name,
-                "address" :  user.address,
-                "email": user.email,
-                "phone_number": user.phone_number,
-                "dob": user.dob,
-                "user_type": user.user_type,
-                "logo": user.logo.url if user.logo else None,
-                "total_learner": total_learner,
-                "total_lesson": total_lesson,
-                "course" : GETCourseSerializer(course, many=True).data,
-                "packages": GETPackageSerializer(packages, many=True).data,
-                "total_vehicle" : total_vehicle,
-                "vehicles": VehicleSerializer(vehicles, many=True).data,
-            }
-            return Response(user_data)
+                total_lessons = course.lesson_numbers if course else 0
+
+                # Fetch other details
+                packages = Package.objects.filter(user=user)
+                vehicles = Vehicle.objects.filter(user=user)
+                total_vehicle = vehicles.count()
+                school_profile = SchoolProfile.objects.filter(user=user).first()
+                license_categories = (
+                        school_profile.license_category.values_list('name', flat=True) if school_profile else []
+                    )
+                payment_methods = (
+                    TransactionHistroy.objects.filter(school=user)
+                    .values_list('payment_method', flat=True)
+                    .distinct())
+                payment_methods_display = ', '.join(payment_methods) if payment_methods else "N/A"
+                course_rating = Review.objects.filter(user=user).aggregate(Avg('rating'))['rating__avg']
+                course_rating = round(course_rating, 1) if course_rating else 0
+
+                user_data = {
+                    "id": user.id,
+                    "Institute_name": school_profile.institute_name,
+                    "license_category": license_categories,
+                    "full_name" :  user.full_name,
+                    "address": user.address,
+                    "email": user.email,
+                    "phone_number": user.phone_number,
+                    "city" : user.city.name if user.city else None,
+                    "user_type": user.user_type,
+                    "logo": user.logo.url if user.logo else None,
+                    "total_learner": total_learner,
+                    "total_lesson": total_lessons,
+                    "course": AdminCourseSerializer(course).data if course else None,
+                    "packages": GETPackageSerializer(packages, many=True).data,
+                    "total_vehicle": total_vehicle,
+                    "vehicles": VehicleSerializer(vehicles, many=True).data,
+                    "payment_methods": payment_methods_display,
+                    "course_rating": course_rating,  
+                }
+                return Response({'success': True,'response': {'data':user_data}},status=status.HTTP_200_OK)
         else:
-            return Response({'status':False,'message':'User type not found.'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status':False,'resonse' : {'message':'User type not found.'}},status=status.HTTP_400_BAD_REQUEST)
         
  
 class UserInactiveApiView(APIView):
