@@ -154,7 +154,8 @@ class UserApiView(APIView):
                 school_profile.instructor_name = instructor_name
                 school_profile.registration_file = registration_file
                 school_profile.save()
-                school_profile.license_category.set(license_category)
+                if license_category:
+                    school_profile.license_category.set(license_category)
 
                 serializer = SchoolUserSerializer(user)
             return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)

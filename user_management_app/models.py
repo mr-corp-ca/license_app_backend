@@ -161,12 +161,17 @@ class SchoolSetting(BaseModelWithCreatedInfo):
 class LearnerReport(BaseModelWithCreatedInfo):
     learner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_learner')
     instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_instructor')
-    reason = models.CharField(max_length=255, null=True, blank=True, choices=REPORT_REASONS)
+    reported_by = models.CharField(max_length=10, choices=REPORTER_CHOICES, default='learner')
+    instructor_reason = models.CharField(max_length=255, null=True, blank=True, choices=INSTRUCTOR_REPORT_REASONS)
     description = models.TextField(null=True, blank=True)
+    learner_reason = models.CharField(max_length=255, null=True, blank=True, choices=LEARNER_REPORT_RESONS)
 
-    def _str_(self):
-        return f"Report for {self.learner.username} - {self.reason}"
-
+    def __str__(self):
+        if self.reported_by == 'learner':
+            return f"Report by {self.learner.username} against {self.instructor.username} - Reason: {self.learner_reason}"
+        elif self.reported_by == 'school':
+            return f"Report by {self.instructor.username} against {self.learner.username} - Reason: {self.instructor_reason}"
+        return f"Report for {self.learner.username} - No Reason Provided"
 
 # class InstructorProfile(BaseModelWithCreatedInfo):
 #     user = models.ForeignKey(User, on_delete=models.CASCADE)
