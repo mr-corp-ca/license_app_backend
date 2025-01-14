@@ -122,16 +122,17 @@ class UserApiView(APIView):
             license_category = request.data.get('license_category')
             registration_file = request.data.get('registration_file')
 
-            if not institute_name or not instructor_name  or not license_category:
-                return Response({'success': False, 'response': {'message': 'Institute name, instructor name, registration_file and license_category are required!'}}, status=status.HTTP_400_BAD_REQUEST)
-
+            if not institute_name or not instructor_name:
+                return Response({'success': False, 'response': {'message': 'Institute Name, Instructor Name is required!'}}, status=status.HTTP_400_BAD_REQUEST)
             if type(license_category) == str:
                 license_category = json.loads(license_category)
 
-        if phone_number:
-            user.phone_number = phone_number
-        if email:
-            user.email = email
+        if not user.phone_number:
+            if phone_number:
+                user.phone_number = phone_number
+        if not user.email:
+            if email:
+                user.email = email
         user.save()
 
         serializer = UserSerializer(user, data=request.data, partial=True) 
