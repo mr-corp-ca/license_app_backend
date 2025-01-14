@@ -915,7 +915,8 @@ class PaymentRequestView(APIView):
             transaction = TransactionHistroy.objects.create(
                 wallet=wallet,
                 amount=total_price,
-                transaction_type=payment_method,
+                transaction_type= 'withdraw',
+                payment_method=payment_method,
                 transaction_status='pending'
             )
 
@@ -931,6 +932,7 @@ class PaymentRequestView(APIView):
                     'transaction_id': transaction.id,
                     'amount': transaction.amount,
                     'transaction_type': transaction.transaction_type,
+                    'payment_method' : transaction.payment_method,
                     'transaction_status': transaction.transaction_status,
                     'package_price': package_price,
                     'gst_amount': f"{gst_amount}%",
@@ -946,6 +948,7 @@ class PaymentRequestView(APIView):
                     'transaction_id': transaction.id,
                     'amount': transaction.amount,
                     'transaction_type': transaction.transaction_type,
+                    'payment_method' : transaction.payment_method,
                     'transaction_status': transaction.transaction_status,
                     'package_price': package_price,
                     'gst_amount': f"{gst_amount}%",

@@ -105,36 +105,12 @@ class GETSchoolCourseSerializer(serializers.ModelSerializer):
 
     def get_plans(self, instance):
         plans = Package.objects.filter(user=instance.user)
-        return PackageSerializer(plans, many=True).data
-
-class SchoolApprovalSerializer(serializers.ModelSerializer):
-    courses = GETSchoolCourseSerializer(source= 'course_user',many=True)
-    vehicles = VehicleSerializer(source='user_vehicle',many=True)
-    packages = PackageSerializer(source = 'package_user',many=True)
-    total_vehicle = serializers.SerializerMethodField()
-
-    class Meta:
-        model = User
-        fields = [
-            'id', 'full_name', 'email', 'address', 'logo', 'user_status',
-            'courses','total_vehicle' ,'vehicles', 'packages'
-        ]
-
-    def get_vehicle(self,instance):
-        vehicle = Vehicle.objects.filter(user=instance.user)
-        return VehicleSerializer(vehicle, many=True).data
+        return PackageSerializer(plans, many=True).data    
     
-    def get_total_vehicle(self, instance):
-        vehicle = Vehicle.objects.filter(user=instance)
-        if vehicle:
-            return vehicle.count()
-        return 0
-    
-    
-class AdminCourseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Course
-        fields = ['id', 'title', 'lesson_numbers']
+#  class AdminCourseSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Course
+#         fields = ['id', 'title', 'lesson_numbers']
 
 class AdminDrivingSchoolListSerializer(serializers.ModelSerializer):
     course = serializers.SerializerMethodField()

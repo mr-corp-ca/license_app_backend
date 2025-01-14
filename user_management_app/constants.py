@@ -62,6 +62,11 @@ TRANSACTION_CHOICES = [
     ('withdraw', 'Withdraw')
     ]
 
+TRANSACTION_METHOD = [
+    ('stripe', 'Stripe'), 
+    ('direct cash', 'Direct Cash')
+    ]
+
 TRANSACTION_STATUS = [
     ('pending', 'Pending'), 
     ('Accepedt', 'Accepted'),
