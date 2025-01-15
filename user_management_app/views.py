@@ -615,34 +615,39 @@ class UserNotificationAPIView(APIView):
 
         return Response({"success": True, 'response': {"message": "Notifications sent successfully."}}, status=status.HTTP_200_OK)
 
-
 class LearnerReportAPIVIEW(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def post(self, request):
         user = request.user
-        learner = request.data.get('learner_id')
-        instructor = request.data.get('school')
 
-        if not learner or not instructor:
-            return response({'success':False, 'response':{'messages': 'learner and instructor both required!'}}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if user.id == learner:
-            user_type = "learner_id"
-        elif user.id == instructor:
-            user_type = "school"
+        try:
+            request.data._mutable = True
+        except:
+            pass
+
+        if user.user_type == 'learner':
+            instructor = request.data.get('instructor')
+            if not instructor:
+                return Response({'success': False, 'response': {'messages': 'Instructor ID is required when learner is reporting!'}}, status=status.HTTP_400_BAD_REQUEST)
+            request.data['learner'] = user.id
+        elif user.user_type == 'school':
+            learner = request.data.get('learner')
+            if not learner:
+                return Response({'success': False, 'response': {'messages': 'Learner ID is required when instructor is reporting!'}}, status=status.HTTP_400_BAD_REQUEST)
+            request.data['instructor'] = user.id
+
         else:
-            return Response({'success': False, 'response':{'message': 'User must be either learner or instructor in the report.'}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'success': False, 'response': {'message': 'User must be either a learner or an instructor to file a report.'}}, status=status.HTTP_400_BAD_REQUEST)
 
-        request.data['user_type'] = user_type
+        request.data['reported_by'] = user.user_type
         
         serializer = LearnerReportSerializer(data=request.data)
         if serializer.is_valid():
             report = serializer.save()
-            return Response({"success": True, "message": f"Report created successfully by {user_type}.", "data": serializer.data}, status=status.HTTP_201_CREATED)
+            return Response({"success": True, "message": f"Report created successfully by {request.data['reported_by']}.", "data": serializer.data}, status=status.HTTP_201_CREATED)
         else:
             return Response({'success': False, 'message': 'Invalid data provided.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # class SearchSchool(APIView):
 #     permission_classes = [IsAuthenticated]

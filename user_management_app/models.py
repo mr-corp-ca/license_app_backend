@@ -159,8 +159,8 @@ class SchoolSetting(BaseModelWithCreatedInfo):
         return str(self.user)
     
 class LearnerReport(BaseModelWithCreatedInfo):
-    learner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_learner')
-    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='learnerreport_instructor')
+    learner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="learner" ,related_name='learnerreport_learner')
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="school" ,related_name='learnerreport_instructor')
     reported_by = models.CharField(max_length=10, choices=REPORTER_CHOICES, default='learner')
     instructor_reason = models.CharField(max_length=255, null=True, blank=True, choices=INSTRUCTOR_REPORT_REASONS)
     description = models.TextField(null=True, blank=True)
