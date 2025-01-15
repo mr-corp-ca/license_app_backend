@@ -127,9 +127,12 @@ class UserNotificationSerializer(serializers.ModelSerializer):
         
 
 class LearnerReportSerializer(serializers.ModelSerializer):
+    # learner = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    # instructor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
     class Meta:
         model = LearnerReport
-        fields = ['id', 'learner', 'instructor', 'reason', 'description']
+        fields = ['id', 'learner', 'learner_reason', 'instructor', 'instructor_reason' ,'reported_by', 'description']
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:

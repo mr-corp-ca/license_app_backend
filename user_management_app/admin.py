@@ -55,3 +55,10 @@ class SchoolProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'institute_name', 'instructor_name', 'created_at', 'updated_at')
     search_fields = ('user__username', 'institute_name', 'instructor_name')
     list_filter = ('license_category', 'services', 'created_at')
+
+@admin.register(LearnerReport)
+class LearnerReportAdmin(admin.ModelAdmin):
+    list_display = ('reported_by','learner', 'instructor', 'learner_reason', 'instructor_reason', 'description', 'created_at')
+    list_filter = ('reported_by', 'created_at', 'learner', 'instructor')
+    search_fields = ('learner__username', 'instructor__username', 'learner_reason', 'instructor_reason', 'description')
+    ordering = ('-created_at',)
