@@ -1,7 +1,7 @@
 from admin_dashboard.serializers.utils_serializer import AdminCitySerializer, AdminProvinceSerializer
 from rest_framework import serializers
 from django.db.models import Avg
-from user_management_app.models import User, SchoolProfile, SchoolSetting,TransactionHistroy
+from user_management_app.models import User, SchoolProfile, SchoolSetting, TransactionHistroy, LearnerReport
 from course_management_app.models import Course, Package, Vehicle,LicenseCategory, Lesson, Service
 from utils_app.models import *
 
@@ -170,3 +170,80 @@ class SchoolApprovalSerializer(serializers.ModelSerializer):
             return AdminProvinceSerializer(instance.province).data
         else:
             return None
+
+
+class LearnerReportSerializer(serializers.ModelSerializer):
+    institute_name = serializers.SerializerMethodField()
+    learner_name = serializers.SerializerMethodField()
+    learner_address = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    learner_phone_number = serializers.SerializerMethodField()
+    instructor_name = serializers.SerializerMethodField()
+    instructor_address = serializers.SerializerMethodField()
+    instructor_phone_number = serializers.SerializerMethodField()
+    license_categories = serializers.SerializerMethodField()
+    vehicles = serializers.SerializerMethodField()
+    no_of_lessons = serializers.SerializerMethodField()
+    class Meta:
+        model = LearnerReport
+        fields = [
+            "id",
+            "institute_name",
+            "learner_name",
+            "learner_address",
+            "city",
+            "no_of_lessons",
+            "learner_phone_number",
+            "instructor_name",
+            "instructor_address",
+            "instructor_phone_number",
+            "reported_by",
+            "learner_reason",
+            "instructor_reason",
+            "description",
+            "license_categories",
+            "vehicles",
+            "created_at",
+        ]
+    
+    def get_institute_name(self, obj):
+        if obj.reported_by == "learner":
+            school_profile = SchoolProfile.objects.filter(user=obj.instructor).first()
+            return school_profile.institute_name if school_profile else "N/A"
+        return None
+
+    def get_learner_name(self, obj):
+        return obj.learner.full_name if obj.learner else "N/A"
+
+    def get_learner_address(self, obj):
+        return obj.learner.address if obj.learner else "N/A"
+
+    def get_learner_phone_number(self, obj):
+        return obj.learner.phone_number if obj.learner else "N/A"
+
+    def get_instructor_name(self, obj):
+        return obj.instructor.full_name if obj.instructor else "N/A"
+
+    def get_instructor_address(self, obj):
+        school_profile = SchoolProfile.objects.filter(user=obj.instructor).first()
+        return school_profile.user.address if school_profile else "N/A"
+
+    def get_city(self, obj):
+        school_profile = SchoolProfile.objects.filter(user=obj.instructor).first()
+        return school_profile.user.city.name if school_profile and school_profile.user.city else "N/A"
+    
+    def get_no_of_lessons(self, obj):
+        course = Course.objects.filter(user=obj.instructor).first()
+        return course.lesson_numbers if course else None
+    
+    def get_instructor_phone_number(self, obj):
+        school_profile = SchoolProfile.objects.filter(user=obj.instructor).first()
+        return school_profile.user.phone_number if school_profile else "N/A"
+
+    def get_license_categories(self, obj):
+        school_profile = SchoolProfile.objects.filter(user=obj.instructor).first()
+        return [category.name for category in school_profile.license_category.all()] if school_profile else []
+
+    def get_vehicles(self, obj):
+        vehicles = Vehicle.objects.filter(user=obj.instructor) if obj.instructor else []
+        return VehicleSerializer(vehicles, many=True).data

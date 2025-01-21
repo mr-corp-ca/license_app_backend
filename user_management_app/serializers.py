@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Avg
 from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory
-
+from decimal import Decimal
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
@@ -407,3 +407,53 @@ class PaymentDetailSerializer(serializers.Serializer):
 
     def get_learner_count(self, obj):
         return LearnerSelectedPackage.objects.filter(package__user=obj.user).count() 
+
+
+class DirectCashRequestSerializer(serializers.ModelSerializer):
+    learner_name = serializers.CharField(source='wallet.user.full_name', read_only=True)
+    package = serializers.SerializerMethodField()
+    license_category = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TransactionHistroy
+        fields = ['id', 'learner_name', 'license_category','package' , 'transaction_status']
+
+    def get_license_category(self, obj):
+        user = self.context['request'].user  
+        school_profile = SchoolProfile.objects.filter(user=user).first()  
+        
+        if school_profile:
+            license_categories = school_profile.license_category.all()
+            
+            if license_categories:
+                return [license.name for license in license_categories]  
+            else:
+                return ['N/A'] 
+        return ['N/A']  
+
+    def get_package(self, obj):
+        user = obj.wallet.user if obj.wallet else None
+
+        if not user:
+            return None
+
+        # Get the learner's selected package
+        package = LearnerSelectedPackage.objects.filter(user=user).first()
+
+        if package:
+            package_price = package.package.price
+            gst_rate = 0.05
+            gst_amount = round(package_price * gst_rate, 2)
+
+            price_with_gst = round(package_price + gst_amount, 2)
+
+            package_data = {
+                "package_name": package.package.name,
+                "lesson_numbers": package.package.lesson_numbers,
+                "base_price": package_price,
+                "gst_amount": f"+{gst_amount}",
+                "price_with_gst": price_with_gst
+            }
+
+            return package_data
+        return None

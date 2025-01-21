@@ -16,7 +16,8 @@ urlpatterns = [
     path('AdminAllLessons/', LessonListAPIView.as_view(), name='lesson-list'),
     path('AdminAddLessons/', AdminAddLessonAPIView.as_view(), name='lesson-detail'),
     path('AdminUpdateLesson/<int:id>/',AdminUpdateLesson.as_view()),
-    path('AdminDeleteLesson/<int:id>/',AdminDeleteLesson.as_view())
+    path('AdminDeleteLesson/<int:id>/',AdminDeleteLesson.as_view()),
+    path('AdminDashboardReport/',AdminDashboardReportView.as_view())
 ]
 
 

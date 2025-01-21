@@ -1,4 +1,4 @@
-from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer
+from admin_dashboard.serializers.user_serializer import AdminNewUserSerializer, AdminUserGetSerializer, DefaultAdminUserSerializer, LearnerReportSerializer
 from admin_dashboard.serializers.course_serializer import AdminDrivingSchoolListSerializer
 from course_management_app.models import Course
 from user_management_app.models import TransactionHistroy, User
@@ -452,3 +452,26 @@ class AdminDeleteLesson(APIView):
         lesson.is_deleted = True
         lesson.save()
         return Response({"message": "Lesson deleted successfully."}, status=status.HTTP_200_OK)
+
+
+class AdminDashboardReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        report_type = request.query_params.get("type")
+
+        if report_type == "learner":
+            reports = LearnerReport.objects.filter(reported_by="learner")
+        elif report_type == "school":
+            reports = LearnerReport.objects.filter(reported_by="school")
+        else:
+            reports = LearnerReport.objects.all()
+
+        serializer = LearnerReportSerializer(reports, many=True)
+
+        return Response(
+            {"success": True, "message": "Reports fetched successfully.", "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
