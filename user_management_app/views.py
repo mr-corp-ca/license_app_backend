@@ -970,3 +970,21 @@ class PaymentRequestView(APIView):
                 'response': {'message': 'An error occurred while processing the payment.'},
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+class LearnerDirectPaymentListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated] 
+    serializer_class = DirectCashRequestSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['wallet__user__username']  
+    filterset_fields = ['transaction_status']  
+    
+    def get_queryset(self):
+        user = self.request.user
+        school_profile = SchoolProfile.objects.filter(user=user).first()
+        if school_profile:
+            print("login User",school_profile.user)
+            return TransactionHistroy.objects.filter(school=school_profile.user)
+        else:
+            return TransactionHistroy.objects.none()
