@@ -27,7 +27,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 import stripe
 import json
-from django.contrib.gis.geos import Point
+from geopy.point import Point
+# from django.contrib.gis.geos import Point
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
