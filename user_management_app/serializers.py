@@ -137,7 +137,7 @@ class LearnerReportSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['id', 'title', 'price', 'lesson_numbers']
+        fields = ['id', 'price', 'lesson_numbers']
 
 
 class VehicleSerializer(serializers.ModelSerializer):
@@ -147,24 +147,24 @@ class VehicleSerializer(serializers.ModelSerializer):
 
 
 class SearchSchoolSerializer(serializers.ModelSerializer):
-    license_category = serializers.SerializerMethodField()
+    # license_category = serializers.SerializerMethodField()
     courses = serializers.SerializerMethodField()
     school_rating = serializers.SerializerMethodField()
 
     class Meta:
         model = SchoolProfile
         fields = [
-            'id', 'institute_name', 'instructor_name', 'license_category',
+            'id', 'institute_name',
             'courses', 'school_rating', 'user'
         ]
 
-    def get_license_category(self, obj):
-        categories = obj.license_category.all()
-        return [{'id': category.id, 'name': category.name} for category in categories]
+    # def get_license_category(self, obj):
+    #     categories = obj.license_category.all()
+    #     return [{'id': category.id, 'name': category.name} for category in categories]
 
     def get_courses(self, obj):
         courses = Course.objects.filter(user=obj.user)
-        return GetCourseSerializer(courses, many=True).data
+        return CourseSerializer(courses, many=True).data
 
     def get_school_rating(self, obj):
         school_ratings = SchoolRating.objects.filter(course__user=obj.user)
