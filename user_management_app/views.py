@@ -28,8 +28,6 @@ from rest_framework import filters
 import stripe
 import json
 from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.measure import D
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
