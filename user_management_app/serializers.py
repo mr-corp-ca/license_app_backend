@@ -136,7 +136,7 @@ class LearnerReportSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Course  
+        model = Course
         fields = ['id', 'title', 'price', 'lesson_numbers']
 
 
@@ -146,21 +146,31 @@ class VehicleSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'vehicle_model']
 
 
-class SchoolSerializer(serializers.ModelSerializer):
+class SearchSchoolSerializer(serializers.ModelSerializer):
+    license_category = serializers.SerializerMethodField()
     courses = serializers.SerializerMethodField()
-    vehicles = VehicleSerializer(many=True, source='user_vehicle.all')
-    rating = serializers.SerializerMethodField()
+    school_rating = serializers.SerializerMethodField()
 
     class Meta:
-        model = User 
-        fields = ['id', 'username', 'address', 'logo', 'courses', 'vehicles', 'rating']
+        model = SchoolProfile
+        fields = [
+            'id', 'institute_name', 'instructor_name', 'license_category',
+            'courses', 'school_rating', 'user'
+        ]
+
+    def get_license_category(self, obj):
+        categories = obj.license_category.all()
+        return [{'id': category.id, 'name': category.name} for category in categories]
 
     def get_courses(self, obj):
-        courses = self.context.get('courses', obj.course_user.all())
-        return CourseSerializer(courses, many=True).data
+        courses = Course.objects.filter(user=obj.user)
+        return GetCourseSerializer(courses, many=True).data
 
-    def get_rating(self, obj):
-        return obj.review_set.aggregate(avg_rating=Avg('rating')).get('avg_rating', None)
+    def get_school_rating(self, obj):
+        school_ratings = SchoolRating.objects.filter(course__user=obj.user)
+        avg_rating = school_ratings.aggregate(avg_rating=Avg('rating'))['avg_rating']
+        return round(avg_rating, 1) if avg_rating else None
+
 
 class GetLessonSerializer(serializers.ModelSerializer):
     class Meta:
