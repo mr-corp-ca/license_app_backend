@@ -27,7 +27,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 import stripe
 import json
-from geopy.point import Point
+from geopy.distance import geodesic
+# from geopy.point import Point
 # from django.contrib.gis.geos import Point
 from django.conf import settings
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -660,19 +661,16 @@ class SearchDrivingSchools(APIView):
             learner_lat = request.query_params.get('learner_lat')
             learner_long = request.query_params.get('learner_long')
 
-            # if not learner_lat or not learner_long:
-            #     return Response(
-            #         {'success': False, 'message': 'Learner latitude and longitude are required!'},
-            #         status=status.HTTP_400_BAD_REQUEST
-            #     )
-
-            try:
-                learner_point = Point(float(learner_long), float(learner_lat), srid=4326)
-            except (TypeError, ValueError):
-                return Response(
-                    {'success': False, 'message': 'Invalid latitude or longitude.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # Check if latitude and longitude are provided
+            learner_location = None
+            if learner_lat and learner_long:
+                try:
+                    learner_location = (float(learner_lat), float(learner_long))
+                except (TypeError, ValueError) as e:
+                    return Response(
+                        {'success': False, 'message': 'Invalid latitude or longitude.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
             # Base query: Filter users with school profiles
             schools = User.objects.filter(
@@ -694,12 +692,34 @@ class SearchDrivingSchools(APIView):
             if max_price:
                 schools = schools.filter(course_user__price__lte=float(max_price))
 
-            # Serialize the results
-            serialized_schools = []
-            for school in schools:
-                # Pass the related SchoolProfile instance to the serializer
-                serializer = SearchSchoolSerializer(school.schoolprofile, context={'request': request})
-                serialized_schools.append(serializer.data)
+            # If learner location is provided, filter schools within 5km radius
+            if learner_location:
+                nearby_schools = []
+                for school in schools:
+                    school_location = (float(school.lat), float(school.long))
+                    distance_in_km = geodesic(learner_location, school_location).km
+                    if distance_in_km <= 5:
+                        nearby_schools.append({
+                            'school': school,
+                            'distance': F"{round(distance_in_km, 2)} km"  
+                        })
+
+                # Serialize results for nearby schools
+                serialized_schools = []
+                for school_data in nearby_schools:
+                    school = school_data['school']
+                    distance = school_data['distance']
+                    serializer = SearchSchoolSerializer(school.schoolprofile, context={'request': request})
+                    school_data = serializer.data
+                    school_data['distance'] = distance  # Add distance to the serialized data
+                    serialized_schools.append(school_data)
+
+            else:
+                # If no learner location, show all schools
+                serialized_schools = []
+                for school in schools:
+                    serializer = SearchSchoolSerializer(school.schoolprofile, context={'request': request})
+                    serialized_schools.append(serializer.data)
 
             return Response(
                 {'success': True, 'data': serialized_schools},
