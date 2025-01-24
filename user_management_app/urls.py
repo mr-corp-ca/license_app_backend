@@ -24,5 +24,6 @@ urlpatterns = [
     path('PaymentDetail/<int:id>/',PaymentDetailView.as_view()),
     path('PaymentRequest/',PaymentRequestView.as_view()),
     path('DirectPaymentRequests/',LearnerDirectPaymentListAPIView.as_view()),
-    path('CancleReport/',LearnerReportAPIVIEW.as_view())
+    path('CancleReport/',LearnerReportAPIVIEW.as_view()),
+    path('Referrals/',ReferralAPIView.as_view())
 ]

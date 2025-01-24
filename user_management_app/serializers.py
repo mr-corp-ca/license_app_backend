@@ -467,3 +467,12 @@ class DirectCashRequestSerializer(serializers.ModelSerializer):
 
             return package_data
         return None
+
+
+class ReferralSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+    invited_users = serializers.StringRelatedField(many=True)
+
+    class Meta:
+        model = Referral
+        fields = ['user', 'unique_code', 'joined_by', 'invited_users', 'total_earnings']

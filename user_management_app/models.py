@@ -1,6 +1,7 @@
 from django.db import models
 # from course_management_app.models import Course
 from utils_app.models import BaseModelWithCreatedInfo
+from django.utils.text import slugify
 from user_management_app.constants import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
@@ -191,3 +192,19 @@ class SchoolProfile(BaseModelWithCreatedInfo):
     institute_name = models.CharField(max_length=255)
     instructor_name = models.CharField(max_length=255)
     registration_file = models.FileField(upload_to='media/school/registration_file')
+
+
+class Referral(BaseModelWithCreatedInfo):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="referral")
+    unique_code = models.SlugField(unique=True, blank=False, null=False)
+    joined_by = models.CharField(max_length=255, blank=True, null=True, help_text="Code of the user who referred this user.")
+    invited_users = models.ManyToManyField(User, related_name="invited_by", blank=True)
+    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+
+    def save(self, *args, **kwargs):
+        if not self.unique_code:
+            self.unique_code = slugify(f"GEARUP{self.user.id:04}")  
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username}'s Referral Code"

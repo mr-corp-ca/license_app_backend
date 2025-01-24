@@ -981,3 +981,74 @@ class LearnerDirectPaymentListAPIView(ListAPIView):
             return TransactionHistroy.objects.filter(school=school_profile.user)
         else:
             return TransactionHistroy.objects.none()
+
+
+class ReferralAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        user = request.user
+        try:
+            referral = Referral.objects.get(user=user)
+            serializer = ReferralSerializer(referral)
+            return Response(
+                {'success': True, 'data': serializer.data},
+                status=status.HTTP_200_OK
+            )
+        except Referral.DoesNotExist:
+            return Response(
+                {'success': False, 'message': 'Referral data not found for this user.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def post(self, request):
+
+        user = request.user
+        joined_by_code = request.data.get('joined_by')  
+        invited_user_ids = request.data.get('invited_user_ids', [])  
+        # Get or create the referral object for the user
+        referral, created = Referral.objects.get_or_create(user=user)
+
+        if joined_by_code:
+            if referral.unique_code == joined_by_code:
+                return Response(
+                    {'success': False, 'message': 'You cannot use your own referral code.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not referral.joined_by:
+                try:
+                    referred_by = Referral.objects.get(unique_code=joined_by_code)
+
+                    # Prevent duplicate referrals for the same user
+                    if referred_by.invited_users.filter(id=user.id).exists():
+                        return Response(
+                            {'success': False, 'message': 'You are already referred by this code.'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    # Update referral relationships
+                    referral.joined_by = joined_by_code
+                    referred_by.total_earnings += 1.0  # Add $1 for the referral
+                    referred_by.invited_users.add(user)
+                    referred_by.save()
+                except Referral.DoesNotExist:
+                    return Response(
+                        {'success': False, 'message': 'Invalid referral code.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+        if invited_user_ids:
+            invited_users = User.objects.filter(id__in=invited_user_ids).exclude(id=user.id)
+            if invited_users.exists():
+                referral.invited_users.add(*invited_users)
+
+        referral.save()
+
+        serializer = ReferralSerializer(referral)
+        return Response(
+            {'success': True, 'data': serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+
