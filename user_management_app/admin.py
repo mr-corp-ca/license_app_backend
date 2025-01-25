@@ -62,3 +62,10 @@ class LearnerReportAdmin(admin.ModelAdmin):
     list_filter = ('reported_by', 'created_at', 'learner', 'instructor')
     search_fields = ('learner__username', 'instructor__username', 'learner_reason', 'instructor_reason', 'description')
     ordering = ('-created_at',)
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    list_display = ("user", "unique_code", "joined_by", "total_earnings")
+    search_fields = ("user__username", "unique_code", "joined_by")
+    list_filter = ("total_earnings",)
+    readonly_fields = ("unique_code",)
