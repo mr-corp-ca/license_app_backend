@@ -6,9 +6,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from user_management_app.models import *
+from timing_slot_app.models import *
+from course_management_app.models import *
 from rest_framework.permissions import IsAuthenticated
 from utils_app.models import City, Province, Radius, Location
-from utils_app.serializers import CitySerializer, ProvinceSerializer,CreateRadiusSerializer, RadiusSerializer
+from utils_app.serializers import CitySerializer, ProvinceSerializer,CreateRadiusSerializer, RadiusSerializer,CoursePurchaseReceiptSerializer
 
 # Create your views here.
 
@@ -153,3 +156,30 @@ class RadiusListCreateView(APIView):
                     {'success': False, 'response': {'message': str(e)}},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+        
+
+class CoursePurchaseReceiptAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            # Filter based on the logged-in user
+            learner = User.objects.filter(id=user.id, user_type='learner').first()
+
+            if not learner:
+                return Response({"success": False, "message": "User is not a learner or does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Get the latest selected package for the learner
+            selected_package = LearnerSelectedPackage.objects.filter(user=learner).last()
+
+            if not selected_package:
+                return Response({"success": False, "message": "No package found for this learner."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Serialize and return the data
+            serializer = CoursePurchaseReceiptSerializer(selected_package)
+            return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"success": False, "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
