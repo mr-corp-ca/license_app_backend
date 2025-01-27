@@ -8,6 +8,12 @@ LESSON_SELECT_CHOICE =(
     ('hire_car','I want to hire a car'),
 )
 
+HIRE_CAR_STATUS= [ 
+    ('Pending', 'Pending'),
+    ('Rejected', 'Rejected'), 
+    ('Paid', 'Paid')
+    ]
+
 def get_day_name(date_input):
     """
     Returns the day name for a given date input.
