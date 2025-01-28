@@ -71,23 +71,78 @@ def get_schedule_times(schedule):
 
 
 def calculate_end_time(start_time, operation_hour, lesson_duration, lesson_gap, 
-                        launch_break_start, launch_break_end, extra_space_start, extra_space_end):
-    end_time = (datetime.combine(datetime.today(), start_time) + timedelta(hours=operation_hour)).time()
-    current_time = start_time
-    
+                       launch_break_start, launch_break_end, extra_space_start, extra_space_end):
+    start_datetime = datetime.combine(datetime.today(), start_time)
+    end_time = start_datetime + timedelta(hours=operation_hour)
+
+    current_time = start_datetime
+    lesson_schedule = []
+    break_schedule = []
+    extra_space_schedule = []
+
+    break_added = False
+    extra_space_added = False
+
+    def add_break_if_needed():
+        nonlocal current_time, break_added
+        if not break_added and launch_break_start and current_time.time() <= launch_break_start < (current_time + timedelta(hours=lesson_duration)).time():
+            # Add free time before the break
+            if current_time.time() < launch_break_start:
+                free_time_start = current_time.time()
+                free_time_end = launch_break_start
+                break_schedule.append((free_time_start, free_time_end))
+            
+            break_schedule.append((launch_break_start, launch_break_end))
+            current_time = datetime.combine(datetime.today(), launch_break_end)  
+            break_added = True
+
+    def add_extra_space_if_needed():
+        nonlocal current_time, extra_space_added
+        if not extra_space_added and extra_space_start and current_time.time() <= extra_space_start < (current_time + timedelta(hours=lesson_duration)).time():
+            # Add free time before the extra space
+            if current_time.time() < extra_space_start:
+                free_time_start = current_time.time()
+                free_time_end = extra_space_start
+                extra_space_schedule.append((free_time_start, free_time_end))
+            
+            # Add the extra space
+            extra_space_schedule.append((extra_space_start, extra_space_end))
+            current_time = datetime.combine(datetime.today(), extra_space_end)  
+            extra_space_added = True
+
     while current_time < end_time:
-        lesson_end = (datetime.combine(datetime.today(), current_time) + timedelta(hours=lesson_duration)).time()
-        
-        if launch_break_start and launch_break_start <= current_time < launch_break_end:
-            current_time = launch_break_end
-            continue
-        if extra_space_start and extra_space_start <= current_time < extra_space_end:
-            current_time = extra_space_end
-            continue
-        
-        current_time = (datetime.combine(datetime.today(), lesson_end) + timedelta(minutes=lesson_gap)).time()
-    
-    return current_time
+        add_break_if_needed()
+        add_extra_space_if_needed()
+
+        lesson_end = current_time + timedelta(hours=lesson_duration)
+
+        if lesson_end > end_time:
+            lesson_end = end_time
+
+        lesson_schedule.append((current_time.time(), lesson_end.time()))
+
+        current_time = lesson_end
+
+        if current_time < end_time:
+            gap_end = current_time + timedelta(minutes=lesson_gap)
+            if gap_end > end_time:
+                gap_end = end_time
+            if not break_added and launch_break_start and gap_end.time() >= launch_break_start:
+                break_schedule.append((current_time.time(), gap_end.time()))
+            elif not extra_space_added and extra_space_start and gap_end.time() >= extra_space_start:
+                extra_space_schedule.append((current_time.time(), gap_end.time()))
+            else:
+                break_schedule.append((current_time.time(), gap_end.time()))
+            current_time = gap_end
+
+    return {
+        "lessons": lesson_schedule,
+        "breaks": break_schedule,
+        "extra_spaces": extra_space_schedule,
+        "end_time": lesson_schedule[-1][1] if lesson_schedule else end_time.time()
+    }
+
+
 
 def validate_even_or_odd(operation_hour: int, lesson_duration: int):
     if operation_hour % 2 != lesson_duration % 2:
