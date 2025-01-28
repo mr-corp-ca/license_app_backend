@@ -476,3 +476,8 @@ class ReferralSerializer(serializers.ModelSerializer):
     class Meta:
         model = Referral
         fields = ['user', 'unique_code', 'joined_by', 'invited_users', 'total_earnings']
+
+
+class StripePaymentSerializer(serializers.Serializer):
+    client_secret = serializers.CharField(max_length=255)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)

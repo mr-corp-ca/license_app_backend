@@ -19,6 +19,7 @@ class MonthlyScheduleAPIView(APIView):
     def post(self, request):
         serializer = MonthlyScheduleSerializer(data=request.data, many=True)
         if serializer.is_valid():
+            response_data = [] 
             for item in serializer.validated_data:
                 try:
                     validate_even_or_odd(int(item['operation_hour']), int(item['lesson_duration']))
@@ -31,7 +32,6 @@ class MonthlyScheduleAPIView(APIView):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-                # Other logic remains unchanged
                 start_time = item['start_time']
                 operation_hour = item['operation_hour']
                 lesson_duration = item['lesson_duration']
@@ -40,35 +40,46 @@ class MonthlyScheduleAPIView(APIView):
                 launch_break_end = item.get('launch_break_end')
                 extra_space_start = item.get('extra_space_start')
                 extra_space_end = item.get('extra_space_end')
-                end_time = calculate_end_time(
-                    start_time,
-                    operation_hour,
-                    lesson_duration,
-                    lesson_gap,
-                    launch_break_start,
-                    launch_break_end,
-                    extra_space_start,
-                    extra_space_end
+
+                # Calculate lessons, breaks, and end time
+                schedule_data = calculate_end_time(
+                    start_time, operation_hour, lesson_duration, lesson_gap,
+                    launch_break_start, launch_break_end, extra_space_start, extra_space_end
                 )
-                
-                item['end_time'] = end_time
+
+                item['end_time'] = schedule_data['end_time']
                 item['user'] = request.user
-                
+
+                # Save to DB
                 schedule, created = MonthlySchedule.objects.update_or_create(
                     user=request.user, 
                     date=item['date'], 
                     defaults=item
                 )
-                
+
+                response_data.append({
+                    "date": item["date"],
+                    "lessons": schedule_data["lessons"],
+                    "breaks": schedule_data["breaks"],
+                    "extra_spaces": schedule_data["extra_spaces"], 
+                    "end_time": schedule_data["end_time"]
+                })
+
             return Response(
-                {"success": True, "response": {"data": serializer.data}},
+                {"success": True, "response": {"data": response_data}},
                 status=status.HTTP_201_CREATED
             )
         else:
-            first_error = next(iter(serializer.errors.items())) 
-            first_field, errors = first_error
-            formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
-            first_error_message = f"{formatted_field} is required!" 
+            if isinstance(serializer.errors, list):
+                first_error_message = " ".join(word.capitalize() for word in str(serializer.errors[0]).split("_"))
+                first_error_message = f"{first_error_message} is required!" 
+            else:
+                first_error = next(iter(serializer.errors.items()))
+                first_field, errors = first_error
+                formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
+                error_message = errors[0].get('message', 'This field is required.')
+                first_error_message = f"{formatted_field} {error_message}"
+
             return Response(
                 {'success': False, 'response': {'message': first_error_message}},
                 status=status.HTTP_400_BAD_REQUEST

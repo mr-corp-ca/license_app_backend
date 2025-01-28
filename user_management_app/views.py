@@ -10,6 +10,7 @@ from rest_framework import status
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from .threads import *
+import stripe
 from utils_app.services import *
 from user_management_app.constants import sendSMS
 from django.contrib.auth import authenticate
@@ -921,25 +922,41 @@ class PaymentRequestView(APIView):
             )
 
             if payment_method == 'stripe':
-                payment_successful = True  
-                if payment_successful:
-                    transaction.transaction_status = 'accepted'
-                else:
-                    transaction.transaction_status = 'rejected'
-                transaction.save()
+                serializer = StripePaymentSerializer(data=data)
+                serializer.is_valid(raise_exception=True)
+                client_secret = serializer.validated_data['client_secret']
+                amount = serializer.validated_data['amount']
 
-                response_data = {
-                    'transaction_id': transaction.id,
-                    'amount': transaction.amount,
-                    'transaction_type': transaction.transaction_type,
-                    'payment_method' : transaction.payment_method,
-                    'transaction_status': transaction.transaction_status,
-                    'package_price': package_price,
-                    'gst_amount': f"{gst_amount}%",
-                    'total_price': total_price,
-                    'message': 'Stripe payment processed successfully.' if payment_successful else 'Stripe payment failed.'
-                }
-                return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
+                try:
+                    intent = stripe.PaymentIntent.retrieve(client_secret)
+                    if intent.status == 'succeeded':
+                        transaction.transaction_status = 'accepted'
+                        transaction.save()
+
+                        response_data = {
+                            'transaction_id': transaction.id,
+                            'amount': transaction.amount,
+                            'transaction_type': transaction.transaction_type,
+                            'payment_method' : transaction.payment_method,
+                            'transaction_status': transaction.transaction_status,
+                            'package_price': package_price,
+                            'gst_amount': f"{gst_amount}%",
+                            'total_price': total_price,
+                            'message': 'Stripe payment processed successfully.'
+                        }
+                        return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
+                    else:
+                        transaction.transaction_status = 'rejected'
+                        transaction.save()
+                        return Response({'success': False, 'response': {'message': 'Stripe payment failed.'}}, status=status.HTTP_400_BAD_REQUEST)
+                except stripe.error.CardError as e:
+                    transaction.transaction_status = 'rejected'
+                    transaction.save()
+                    return Response({"success": False, 'response': {'message': 'Card declined.'}}, status=status.HTTP_400_BAD_REQUEST)
+                except stripe.error.StripeError as e:
+                    transaction.transaction_status = 'rejected'
+                    transaction.save()
+                    return Response({"success": False, 'response': {'message': 'Stripe error: ' + str(e)}}, status=status.HTTP_400_BAD_REQUEST)
 
             elif payment_method == 'direct_cash':
                 transaction.save()
