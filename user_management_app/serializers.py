@@ -481,3 +481,43 @@ class ReferralSerializer(serializers.ModelSerializer):
 class StripePaymentSerializer(serializers.Serializer):
     client_secret = serializers.CharField(max_length=255)
     amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class LearnerRoadTestRequestSerializer(serializers.ModelSerializer):
+    learner_name = serializers.CharField(source='user.full_name', read_only=True)
+    address = serializers.CharField(source='location', read_only=True)
+    book_date = serializers.DateField(source='road_test_date', read_only=True)
+    book_time = serializers.TimeField(source='road_test_time', read_only=True)
+    road_test_status = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = LearnerBookingSchedule
+        fields = ['id','learner_name', 'address', 'book_date', 'book_time', 'road_test_status']
+
+
+class RoadTestApprovalSerializer(serializers.Serializer):
+    ACTION_CHOICES = [('accept', 'Accept'), ('reject', 'Reject')]
+    
+    action = serializers.ChoiceField(choices=ACTION_CHOICES, required=True)
+
+    def update(self, instance, validated_data):
+        action = validated_data.get('action')
+
+        if action == 'accept':
+            instance.road_test_status = 'accepted'
+            message = "Your road test request has been accepted."
+        elif action == 'reject':
+            instance.road_test_status = 'rejected'
+            message = "Your road test request has been rejected."
+
+        instance.save()
+
+        # Create a UserNotification entry
+        UserNotification.objects.create(
+            user=instance.user, 
+            description=message,
+            status=action,
+            noti_type='Road test'
+        )
+
+        return instance

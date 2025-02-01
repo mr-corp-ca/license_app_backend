@@ -24,6 +24,8 @@ urlpatterns = [
     path('PaymentDetail/<int:id>/',PaymentDetailView.as_view()),
     path('PaymentRequest/',PaymentRequestView.as_view()),
     path('DirectPaymentRequests/',LearnerDirectPaymentListAPIView.as_view()),
+    path('RoadTestRequests/', RoadTestListAPIView.as_view(), name='road-test-list'),
+    path('RoadTestApproval/<int:id>/', RoadTestApprovalAPIView.as_view(), name='road-test-approve'),
     path('CancleReport/',LearnerReportAPIVIEW.as_view()),
     path('Referrals/',ReferralAPIView.as_view())
 ]

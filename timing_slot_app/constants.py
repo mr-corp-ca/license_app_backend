@@ -14,6 +14,12 @@ HIRE_CAR_STATUS= [
     ('Paid', 'Paid')
     ]
 
+ROAD_TEST_STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+]
+
 def get_day_name(date_input):
     """
     Returns the day name for a given date input.
@@ -148,3 +154,6 @@ def validate_even_or_odd(operation_hour: int, lesson_duration: int):
     if operation_hour % 2 != lesson_duration % 2:
         raise ValueError("Operation hour and lesson duration must both be even or both odd.")
     return True
+
+def convert_time(value):
+    return datetime.strptime(value, "%H:%M").time() if value else None
