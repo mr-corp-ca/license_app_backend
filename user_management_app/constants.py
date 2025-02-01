@@ -102,3 +102,8 @@ REPORTER_CHOICES = [
     ('learner', 'Learner'),
     ('school', 'School'),
 ]
+
+USER_REFERRAL_TYPE = [
+    ('school', 'School'), 
+    ('learner', 'Learner')
+]
