@@ -470,12 +470,22 @@ class DirectCashRequestSerializer(serializers.ModelSerializer):
 
 
 class ReferralSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()
-    invited_users = serializers.StringRelatedField(many=True)
+    points = serializers.SerializerMethodField()
+    wallet_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = Referral
-        fields = ['user', 'unique_code', 'joined_by', 'invited_users', 'total_earnings']
+        fields = ['user', 'unique_code', 'joined_by', 'invited_users', 'total_earnings', 'user_type', 'referral_count', 'points', 'wallet_balance']
+
+    def get_points(self, obj):
+        if obj.user_type == 'school':
+            return obj.referral_count // 10 
+        return None
+
+    def get_wallet_balance(self, obj):
+        wallet, _ = Wallet.objects.get_or_create(user=obj.user)
+        return wallet.balance
+
 
 
 class StripePaymentSerializer(serializers.Serializer):

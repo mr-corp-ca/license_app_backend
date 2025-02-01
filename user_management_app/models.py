@@ -200,6 +200,8 @@ class Referral(BaseModelWithCreatedInfo):
     joined_by = models.CharField(max_length=255, blank=True, null=True, help_text="Code of the user who referred this user.")
     invited_users = models.ManyToManyField(User, related_name="invited_by", blank=True)
     total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    user_type = models.CharField(max_length=10, choices=USER_REFERRAL_TYPE, default='learner')
+    referral_count = models.IntegerField(default=0) 
 
     def save(self, *args, **kwargs):
         if not self.unique_code:

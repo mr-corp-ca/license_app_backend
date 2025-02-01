@@ -2,6 +2,7 @@ import string
 import threading
 from .models import *
 from .serializers import *
+from django.db import transaction
 from random import choice
 from django.db.models import Avg
 from itertools import chain
@@ -1003,69 +1004,84 @@ class LearnerDirectPaymentListAPIView(ListAPIView):
 class ReferralAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-
-        user = request.user
-        try:
-            referral = Referral.objects.get(user=user)
-            serializer = ReferralSerializer(referral)
-            return Response(
-                {'success': True, 'response':{'data': serializer.data}},
-                status=status.HTTP_200_OK
-            )
-        except Referral.DoesNotExist:
-            return Response(
-                {'success': False, 'response': {'message': 'Referral data not found for this user.'}},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
     def post(self, request):
-
         user = request.user
         joined_by_code = request.data.get('joined_by')  
         invited_user_ids = request.data.get('invited_user_ids', [])  
-        # Get or create the referral object for the user
         referral, created = Referral.objects.get_or_create(user=user)
 
-        if joined_by_code:
-            if referral.unique_code == joined_by_code:
-                return Response(
-                    {'success': False, 'response':{'message': 'You cannot use your own referral code.'}},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        # Ensure the user has a wallet
+        wallet, _ = Wallet.objects.get_or_create(user=user)
 
-            if not referral.joined_by:
-                try:
-                    referred_by = Referral.objects.get(unique_code=joined_by_code)
-
-                    # Prevent duplicate referrals for the same user
-                    if referred_by.invited_users.filter(id=user.id).exists():
-                        return Response(
-                            {'success': False, 'response': {'message': 'You are already referred by this code.'}},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-
-                    # Update referral relationships
-                    referral.joined_by = joined_by_code
-                    referred_by.total_earnings += 1.0  # Add $1 for the referral
-                    referred_by.invited_users.add(user)
-                    referred_by.save()
-                except Referral.DoesNotExist:
+        with transaction.atomic():  # Ensure atomic updates
+            if joined_by_code:
+                if referral.unique_code == joined_by_code:
                     return Response(
-                        {'success': False, 'response' : {'message': 'Invalid referral code.'}},
+                        {'success': False, 'response': {'message': 'You cannot use your own referral code.'}},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-        if invited_user_ids:
-            invited_users = User.objects.filter(id__in=invited_user_ids).exclude(id=user.id)
-            if invited_users.exists():
-                referral.invited_users.add(*invited_users)
+                if not referral.joined_by:
+                    try:
+                        referred_by = Referral.objects.get(unique_code=joined_by_code)
 
-        referral.save()
+                        if referred_by.invited_users.filter(id=user.id).exists():
+                            return Response(
+                                {'success': False, 'response': {'message': 'You are already referred by this code.'}},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+
+                        referral.joined_by = joined_by_code
+                        referred_by.invited_users.add(user)
+
+                        referred_wallet, _ = Wallet.objects.get_or_create(user=referred_by.user)
+
+                        if referred_by.user.user_type == 'school':
+                            referred_by.referral_count += 1
+                            referred_by.save()
+
+                            if referred_by.referral_count % 10 == 0:
+                                referred_by.total_earnings += 1.0
+                                referred_wallet.balance += 1.0  
+                                referred_wallet.save()
+
+                                TransactionHistroy.objects.create(
+                                    school=referred_by.user,
+                                    wallet=referred_wallet,
+                                    amount=1.0,
+                                    transaction_type='credit',
+                                    transaction_status='completed'
+                                )
+
+                        else:
+                            referred_by.total_earnings += 1.0
+                            referred_wallet.balance += 1.0  
+                            referred_wallet.save()
+
+                            TransactionHistroy.objects.create(
+                                wallet=referred_wallet,
+                                amount=1.0,
+                                transaction_type='credit',
+                                transaction_status='completed'
+                            )
+
+                        referred_by.user.save()
+                        referred_by.save()
+                    except Referral.DoesNotExist:
+                        return Response(
+                            {'success': False, 'response': {'message': 'Invalid referral code.'}},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+            if invited_user_ids:
+                invited_users = User.objects.filter(id__in=invited_user_ids).exclude(id=user.id)
+                if invited_users.exists():
+                    referral.invited_users.add(*invited_users)
+
+            referral.save()
 
         serializer = ReferralSerializer(referral)
-        return Response({'success': True, 'response':{'data': serializer.data}},status=status.HTTP_201_CREATED
-        )
+        return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_201_CREATED)
 
 
 class RoadTestListAPIView(ListAPIView):
