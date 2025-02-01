@@ -8,7 +8,7 @@ class MonthlyScheduleSerializer(serializers.ModelSerializer):
         fields = ['date', 'start_time', 'end_time', 'launch_break_start', 'launch_break_end', 'extra_space_start', 'extra_space_end', 'vehicle', 'lesson_gap', 'lesson_duration', 'extra_space_end', 'operation_hour']
 
 class GETMonthlyScheduleSerializer(serializers.ModelSerializer):
-    day_name = serializers.SerializerMethodField()
+
     
     class Meta:
         model = MonthlySchedule

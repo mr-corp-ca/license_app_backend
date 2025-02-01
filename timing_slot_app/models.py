@@ -1,5 +1,5 @@
 from django.db import models
-from timing_slot_app.constants import LESSON_SELECT_CHOICE,HIRE_CAR_STATUS
+from timing_slot_app.constants import LESSON_SELECT_CHOICE,HIRE_CAR_STATUS,ROAD_TEST_STATUS_CHOICES
 from utils_app.models import BaseModelWithCreatedInfo
 
 # Create your models here.
@@ -36,6 +36,7 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     road_test = models.BooleanField(default= False)
     road_test_date= models.DateField(null=True, blank=True)
     road_test_time = models.TimeField(null=True, blank=True) 
+    road_test_status = models.CharField(max_length=10, choices=ROAD_TEST_STATUS_CHOICES, default='pending')
     special_lesson = models.BooleanField(default= False)
     hire_car = models.BooleanField(default= False)
     hire_car_status = models.CharField(max_length=20,choices=HIRE_CAR_STATUS,default='Pending')

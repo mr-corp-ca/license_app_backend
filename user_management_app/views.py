@@ -669,7 +669,7 @@ class SearchDrivingSchools(APIView):
                     learner_location = (float(learner_lat), float(learner_long))
                 except (TypeError, ValueError) as e:
                     return Response(
-                        {'success': False, 'message': 'Invalid latitude or longitude.'},
+                        {'success': False, 'response' : {'message': 'Invalid latitude or longitude.'}},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
@@ -723,7 +723,7 @@ class SearchDrivingSchools(APIView):
                     serialized_schools.append(serializer.data)
 
             return Response(
-                {'success': True, 'data': serialized_schools},
+                {'success': True,'response':{'data': serialized_schools}},
                 status=status.HTTP_200_OK
             )
 
@@ -1010,12 +1010,12 @@ class ReferralAPIView(APIView):
             referral = Referral.objects.get(user=user)
             serializer = ReferralSerializer(referral)
             return Response(
-                {'success': True, 'data': serializer.data},
+                {'success': True, 'response':{'data': serializer.data}},
                 status=status.HTTP_200_OK
             )
         except Referral.DoesNotExist:
             return Response(
-                {'success': False, 'message': 'Referral data not found for this user.'},
+                {'success': False, 'response': {'message': 'Referral data not found for this user.'}},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -1030,7 +1030,7 @@ class ReferralAPIView(APIView):
         if joined_by_code:
             if referral.unique_code == joined_by_code:
                 return Response(
-                    {'success': False, 'message': 'You cannot use your own referral code.'},
+                    {'success': False, 'response':{'message': 'You cannot use your own referral code.'}},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -1041,7 +1041,7 @@ class ReferralAPIView(APIView):
                     # Prevent duplicate referrals for the same user
                     if referred_by.invited_users.filter(id=user.id).exists():
                         return Response(
-                            {'success': False, 'message': 'You are already referred by this code.'},
+                            {'success': False, 'response': {'message': 'You are already referred by this code.'}},
                             status=status.HTTP_400_BAD_REQUEST
                         )
 
@@ -1052,7 +1052,7 @@ class ReferralAPIView(APIView):
                     referred_by.save()
                 except Referral.DoesNotExist:
                     return Response(
-                        {'success': False, 'message': 'Invalid referral code.'},
+                        {'success': False, 'response' : {'message': 'Invalid referral code.'}},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
@@ -1064,8 +1064,50 @@ class ReferralAPIView(APIView):
         referral.save()
 
         serializer = ReferralSerializer(referral)
-        return Response(
-            {'success': True, 'data': serializer.data},
-            status=status.HTTP_201_CREATED
+        return Response({'success': True, 'response':{'data': serializer.data}},status=status.HTTP_201_CREATED
         )
 
+
+class RoadTestListAPIView(ListAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    serializer_class = LearnerRoadTestRequestSerializer
+    pagination_class = StandardResultSetPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ['user__full_name', 'location']
+    filterset_fields = ['road_test_date', 'road_test_status']
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.user_type == 'school':
+            return LearnerBookingSchedule.objects.filter(road_test=True)
+        return LearnerBookingSchedule.objects.none()
+    
+
+class RoadTestApprovalAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, id):
+        user = request.user
+        if user.user_type != 'school':
+            return Response({'success': False, 'response' : { 'message': 'Only schools (instructors) can approve/reject road tests.'}}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            booking = LearnerBookingSchedule.objects.get(id=id, road_test=True)
+        except LearnerBookingSchedule.DoesNotExist:
+            return Response({'success': False, 'response':{'message': 'Road test request not found.'}}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = RoadTestApprovalSerializer(data=request.data)
+        if serializer.is_valid():
+            action = serializer.validated_data['action']
+            serializer.update(booking, serializer.validated_data)
+
+            # Send push notification to the learner
+            notification_title = "Road Test Request Update"
+            notification_message = f"Your road test request has been {action}ed."
+            notification_type = "Road test"
+            send_push_notification(booking.user, notification_title, notification_message, notification_type)
+
+            return Response({'success': True, 'response': {'message': f'Road test request {action}ed successfully.'}}, status=status.HTTP_200_OK)
+
+        return Response({'success':False ,'response' : {'errors':serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)

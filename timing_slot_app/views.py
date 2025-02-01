@@ -5,7 +5,7 @@ from rest_framework import status
 from decimal import Decimal
 from datetime import date
 from course_management_app.models import Vehicle
-from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd
+from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd,convert_time
 from utils_app.models import Location,Radius
 from user_management_app.models import Wallet,TransactionHistroy
 from datetime import datetime, timedelta
@@ -32,22 +32,6 @@ class MonthlyScheduleAPIView(APIView):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-                start_time = item['start_time']
-                operation_hour = item['operation_hour']
-                lesson_duration = item['lesson_duration']
-                lesson_gap = item['lesson_gap']
-                launch_break_start = item.get('launch_break_start')
-                launch_break_end = item.get('launch_break_end')
-                extra_space_start = item.get('extra_space_start')
-                extra_space_end = item.get('extra_space_end')
-
-                # Calculate lessons, breaks, and end time
-                schedule_data = calculate_end_time(
-                    start_time, operation_hour, lesson_duration, lesson_gap,
-                    launch_break_start, launch_break_end, extra_space_start, extra_space_end
-                )
-
-                item['end_time'] = schedule_data['end_time']
                 item['user'] = request.user
 
                 # Save to DB
@@ -57,12 +41,22 @@ class MonthlyScheduleAPIView(APIView):
                     defaults=item
                 )
 
+               
+                day_name = get_day_name(item["date"])
+
+                # Add the day name to the response data
                 response_data.append({
                     "date": item["date"],
-                    "lessons": schedule_data["lessons"],
-                    "breaks": schedule_data["breaks"],
-                    "extra_spaces": schedule_data["extra_spaces"], 
-                    "end_time": schedule_data["end_time"]
+                    "vehicle": item["vehicle"].id,
+                    "start_time": item["start_time"],
+                    "end_time": item["end_time"],
+                    "launch_break_start": item.get("launch_break_start"),
+                    "launch_break_end": item.get("launch_break_end"),
+                    "extra_space_start": item.get("extra_space_start"),
+                    "extra_space_end": item.get("extra_space_end"),
+                    "lesson_gap": item.get("lesson_gap"),
+                    "lesson_duration": item.get("lesson_duration"),
+                    "day_name": day_name 
                 })
 
             return Response(
@@ -70,29 +64,65 @@ class MonthlyScheduleAPIView(APIView):
                 status=status.HTTP_201_CREATED
             )
         else:
-            if isinstance(serializer.errors, list):
-                first_error_message = " ".join(word.capitalize() for word in str(serializer.errors[0]).split("_"))
-                first_error_message = f"{first_error_message} is required!" 
-            else:
-                first_error = next(iter(serializer.errors.items()))
-                first_field, errors = first_error
-                formatted_field = " ".join(word.capitalize() for word in first_field.split("_"))
-                error_message = errors[0].get('message', 'This field is required.')
-                first_error_message = f"{formatted_field} {error_message}"
-
             return Response(
-                {'success': False, 'response': {'message': first_error_message}},
+                {'success': False, 'response': {'message': 'Invalid data'}},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
     def get(self, request):
-        user = request.user
-        schedule_objects = MonthlySchedule.objects.filter(user=user).order_by('date')
-        serializer = GETMonthlyScheduleSerializer(schedule_objects, many=True)
+        print("Received Query Params:", request.query_params)
+
+        # Extract the parameters from the query string
+        date = request.query_params.get('date')
+        start_time = request.query_params.get('start_time')
+        operation_hour = request.query_params.get('operation_hour')
+        lesson_duration = request.query_params.get('lesson_duration')
+
+        if not date or not start_time or not operation_hour or not lesson_duration:
+            return Response(
+                {'success': False, 'response': {'message': 'Missing required parameters'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Convert the date string to a date object
+            date = datetime.strptime(date, "%Y-%m-%d").date()
+            start_time = datetime.strptime(start_time, "%H:%M").time()
+            operation_hour = int(operation_hour)
+            lesson_duration = int(lesson_duration)
+        except ValueError:
+            return Response(
+                {'success': False, 'response': {'message': 'Invalid parameter format'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        lesson_gap = int(request.query_params.get('lesson_gap', 0))
+        launch_break_start = request.query_params.get('launch_break_start')
+        launch_break_end = request.query_params.get('launch_break_end')
+        extra_space_start = request.query_params.get('extra_space_start')
+        extra_space_end = request.query_params.get('extra_space_end')
+
+        launch_break_start = convert_time(launch_break_start)
+        launch_break_end = convert_time(launch_break_end)
+        extra_space_start = convert_time(extra_space_start)
+        extra_space_end = convert_time(extra_space_end)
+
+        schedule_data = calculate_end_time(
+            start_time, operation_hour, lesson_duration, lesson_gap,
+            launch_break_start, launch_break_end, extra_space_start, extra_space_end
+        )
+
+        # Calculate the day name based on the provided date
+        day_name = get_day_name(date)
+
+        # Add day name to the schedule data
+        schedule_data['day_name'] = day_name
+
         return Response(
-            {"success": True, "response": {"data": serializer.data}},
+            {"success": True, "response": {"data": schedule_data}},
             status=status.HTTP_200_OK
         )
+
 class LearnerMonthlyScheduleView(APIView):
     permission_classes = [IsAuthenticated]
 
