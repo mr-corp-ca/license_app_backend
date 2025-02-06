@@ -239,7 +239,7 @@ class SchoolDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = SchoolProfile
         fields = [
-            'institute_name', 'school_rating', 'course', 'license_category',
+            'id','institute_name', 'school_rating', 'course', 'license_category',
             'plans',
         ]
     
