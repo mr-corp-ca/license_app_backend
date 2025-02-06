@@ -30,7 +30,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 import stripe
 import json
-from geopy.distance import geodesic
+# from geopy.distance import geodesic
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
 from django.conf import settings
