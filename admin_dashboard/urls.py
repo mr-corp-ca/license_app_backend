@@ -17,7 +17,10 @@ urlpatterns = [
     path('AdminAddLessons/', AdminAddLessonAPIView.as_view(), name='lesson-detail'),
     path('AdminUpdateLesson/<int:id>/',AdminUpdateLesson.as_view()),
     path('AdminDeleteLesson/<int:id>/',AdminDeleteLesson.as_view()),
-    path('AdminDashboardReport/',AdminDashboardReportView.as_view())
+    path('AdminDashboardReport/',AdminDashboardReportView.as_view()),
+
+    # Template Base
+    path('delete_user_account/',delete_user_account)
 ]
 
 

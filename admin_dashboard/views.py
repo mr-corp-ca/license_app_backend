@@ -30,7 +30,10 @@ from django.db.models import Sum,Count,Case, When, Value, IntegerField
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.utils.timezone import now
-
+from django.shortcuts import render
+from django.db.models import Q
+from fcm_django.models import FCMDevice
+from django.views.decorators.csrf import csrf_exempt
 
 def get_monthly_income(data_type, month=None):
     try:
@@ -475,3 +478,36 @@ class AdminDashboardReportView(APIView):
             {"success": True, "message": "Reports fetched successfully.", "data": serializer.data},
             status=status.HTTP_200_OK
         )
+
+
+@csrf_exempt
+def delete_user_account(request):
+    context = {}
+
+    if request.method == 'POST':
+        full_name = request.POST.get('full_name')
+        phone_number = request.POST.get('phone_number')
+        reason = request.POST.get('reason')
+
+        user = User.objects.filter(Q(phone_number=phone_number) | Q(email=phone_number), is_deleted=False).first()
+
+        if not user:
+            context['user_message'] = 'The user with the provided email or phone number does not exist, or the account has been deleted.'
+            context['color'] = 'danger'
+            return render(request, 'license_app/accounts/delete_account.html', context)
+
+        user.is_deleted = True
+        
+        user.deletd_reason = reason
+        
+        user.save()
+
+        FCMDevice.objects.filter(user=user).delete()
+        token = Token.objects.filter(user=user)
+        if token:
+            token.delete()
+
+        context['user_message'] = 'The account has been deleted successfully!'
+        context['color'] = 'success'
+
+    return render(request, 'license_app/accounts/delete_account.html', context)
