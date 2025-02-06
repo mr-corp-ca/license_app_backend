@@ -1130,39 +1130,3 @@ class RoadTestApprovalAPIView(APIView):
             return Response({'success': True, 'response': {'message': f'Road test request {action}ed successfully.'}}, status=status.HTTP_200_OK)
 
         return Response({'success':False ,'response' : {'errors':serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
-
-def delete_success(request):
-    return render(request, 'delete_success.html')
-
-class DeleteUserAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        phone_number = request.data.get("phone_number")
-        reason = request.data.get("reason")
-
-        if not phone_number or not reason:
-            return Response({"success": False, "message": "Phone number and reason are required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validate reason against the choices
-        valid_reasons = [choice[0] for choice in User.DELETED_REASON]
-        if reason not in valid_reasons:
-            return Response({"success": False, "message": "Invalid reason selected."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(phone_number=phone_number)
-
-            if user != request.user:
-                return Response({"success": False, "message": "You are not authorized to delete this user."}, status=status.HTTP_403_FORBIDDEN)
-
-            user.is_deleted = True
-            user.deleted_reason = reason
-            user.save()
-
-            # Remove authentication token
-            Token.objects.filter(user=user).delete()
-
-            return Response({"success": True, "message": "User deleted successfully."}, status=status.HTTP_200_OK)
-
-        except ObjectDoesNotExist:
-            return Response({"success": False, "message": "User not found."}, status=status.HTTP_404_NOT_FOUND)

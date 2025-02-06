@@ -107,3 +107,10 @@ USER_REFERRAL_TYPE = [
     ('school', 'School'), 
     ('learner', 'Learner')
 ]
+
+DELETED_REASON = [
+    ('duplicate', 'Duplicate'),
+    ('inappropriate', 'Inappropriate'),
+    ('spam', 'Spam'),
+    ('other', 'Other')
+    ]
