@@ -70,7 +70,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     is_deleted = models.BooleanField(default=False)
-    
+    deletd_reason =  models.CharField(max_length=255, choices=DELETED_REASON, null=True, blank=True)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['phone_number']
 
