@@ -1,5 +1,6 @@
 import string
 import threading
+from django.shortcuts import render, redirect
 from .models import *
 from .serializers import *
 from django.db import transaction
@@ -755,26 +756,26 @@ class SchoolDetail(APIView):
 class VehicleSelectionView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request,id):
+    def get(self, request, id):
         try:
-            school = User.objects.filter(user_type='school', id=id).first()
-            if not school:
-                return Response({'success': False, 'response':{'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
+            # Fetch the school profile
+            school_profile = SchoolProfile.objects.filter(user__user_type='school', id=id).select_related('user').first()
+            if not school_profile:
+                return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            vehicles = Vehicle.objects.filter(user=school, booking_status='free')
-
+            vehicles = Vehicle.objects.filter(user=school_profile.user, booking_status='free')
             serializer = VehicleDetailSerializer(vehicles, many=True)
 
             return Response({
                 'success': True,
-               'response':{ 'data': serializer.data}
+                'response': {'data': serializer.data}
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
             print("Error=====>", e)
             return Response({
                 'success': False,
-              'response': {'message': 'An error occurred while fetching vehicles.'},
+                'response': {'message': 'An error occurred while fetching vehicles.'},
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -784,24 +785,25 @@ class VehicleSelectionView(APIView):
             vehicle_id = request.data.get('id')
 
             if user.user_type != 'learner':
-                return Response({'success': False,'response':{'message': 'Only learners can select vehicles.'}}, status=status.HTTP_403_FORBIDDEN)
+                return Response({'success': False, 'response': {'message': 'Only learners can select vehicles.'}}, status=status.HTTP_403_FORBIDDEN)
 
-            school = User.objects.filter(user_type='school', id=id).first()
-            if not school:
-                return Response({'success': False, 'response':{'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
+            # Fetch the school profile
+            school_profile = SchoolProfile.objects.filter(user__user_type='school', id=id).first()
+            if not school_profile:
+                return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            vehicle = Vehicle.objects.filter(id=vehicle_id, user=school, booking_status='free').first()
+            vehicle = Vehicle.objects.filter(id=vehicle_id, user=school_profile.user, booking_status='free').first()
             if not vehicle:
                 return Response({
                     'success': False,
-                    'response':{'message': 'Vehicle not found, not associated with this school, or already booked.'}
+                    'response': {'message': 'Vehicle not found, not associated with this school, or already booked.'}
                 }, status=status.HTTP_404_NOT_FOUND)
 
             previous_vehicle = Vehicle.objects.filter(user=user).first()
             if previous_vehicle:
                 return Response({
                     'success': False,
-                   'response':{ 'message': f'You have already selected a vehicle: {previous_vehicle.name}.'}
+                    'response': {'message': f'You have already selected a vehicle: {previous_vehicle.name}.'}
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             vehicle.booking_status = 'booked'
@@ -810,25 +812,26 @@ class VehicleSelectionView(APIView):
 
             return Response({
                 'success': True,
-                'response':{
+                'response': {
                     'data': {
-                    'vehicle_id': vehicle.id,
-                    'vehicle_name': vehicle.name,
-                    'vehicle_number': vehicle.vehicle_registration_no,
-                    'license_number': vehicle.license_number,
-                    'school_id': school.id,
-                    'school_name': school.full_name,
+                        'vehicle_id': vehicle.id,
+                        'vehicle_name': vehicle.name,
+                        'vehicle_number': vehicle.vehicle_registration_no,
+                        'license_number': vehicle.license_number,
+                        'school_id': school_profile.user.id,
+                        'school_name': school_profile.user.full_name,
+                    }
                 }
-            }
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             print("Error=====>", e)
             return Response({
                 'success': False,
-                'response':{'message': 'An error occurred while processing the request.'},
+                'response': {'message': 'An error occurred while processing the request.'},
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class InstructorDashboardAPIView(APIView):
@@ -1127,3 +1130,39 @@ class RoadTestApprovalAPIView(APIView):
             return Response({'success': True, 'response': {'message': f'Road test request {action}ed successfully.'}}, status=status.HTTP_200_OK)
 
         return Response({'success':False ,'response' : {'errors':serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
+
+def delete_success(request):
+    return render(request, 'delete_success.html')
+
+class DeleteUserAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        phone_number = request.data.get("phone_number")
+        reason = request.data.get("reason")
+
+        if not phone_number or not reason:
+            return Response({"success": False, "message": "Phone number and reason are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate reason against the choices
+        valid_reasons = [choice[0] for choice in User.DELETED_REASON]
+        if reason not in valid_reasons:
+            return Response({"success": False, "message": "Invalid reason selected."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+
+            if user != request.user:
+                return Response({"success": False, "message": "You are not authorized to delete this user."}, status=status.HTTP_403_FORBIDDEN)
+
+            user.is_deleted = True
+            user.deleted_reason = reason
+            user.save()
+
+            # Remove authentication token
+            Token.objects.filter(user=user).delete()
+
+            return Response({"success": True, "message": "User deleted successfully."}, status=status.HTTP_200_OK)
+
+        except ObjectDoesNotExist:
+            return Response({"success": False, "message": "User not found."}, status=status.HTTP_404_NOT_FOUND)
