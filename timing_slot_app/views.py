@@ -144,7 +144,20 @@ class LearnerMonthlyScheduleView(APIView):
                         status=status.HTTP_404_NOT_FOUND
                     )
             try:
-                locations = Location.objects.filter(radius__user=vehicle.user)
+                radius = Radius.objects.filter(user=vehicle.user).first()
+                if not radius:
+                    return Response(
+                        {'success': False, 'response': {'message': 'No radius found for this user.'}},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                locations = Location.objects.filter(radius=radius)
+                if not locations:
+                    return Response(
+                        {'success': False, 'response': {'message': 'No locations found for this radius.'}},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
                 serialized_locations = LocationSerializer(locations, many=True).data
                 
                 monthly_schedules = MonthlySchedule.objects.filter(vehicle_id=vehicle_id)
