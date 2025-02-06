@@ -41,6 +41,7 @@ class CourseApiView(APIView):
         request_data = request.data
         description = request.data.get('description', '').strip()
         price = request.data.get('price', 0.0)
+        road_test_price = request.data.get('road_test_price', None)  # New field
         refund_policy = request.data.get('refund_policy', '').strip()
         lesson_numbers = int(request.data.get('lesson_numbers', 0))
         lessons = request_data.get('lessons')
@@ -60,6 +61,7 @@ class CourseApiView(APIView):
             "user": user.id,
             "description": description,
             "price": price,
+            "road_test_price": road_test_price,  # New field
             "refund_policy": refund_policy,
             "lesson_numbers": lesson_numbers,
         }
@@ -78,7 +80,6 @@ class CourseApiView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     def patch(self, request, id):
         user = request.user
@@ -102,7 +103,6 @@ class CourseApiView(APIView):
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
     def get(self, request):

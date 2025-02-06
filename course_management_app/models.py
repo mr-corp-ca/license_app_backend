@@ -24,6 +24,7 @@ class Course(BaseModelWithCreatedInfo):
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(blank=True, null=True, verbose_name='About')
     price = models.FloatField(default=0.0, verbose_name='price per lesson')
+    road_test_price = models.PositiveIntegerField(null=True, blank=True)
     lesson_numbers = models.PositiveIntegerField()
     refund_policy = models.TextField(blank=True, null=True)
     # course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)

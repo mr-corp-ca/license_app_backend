@@ -269,15 +269,14 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
 
 
 class GETSingleCourseSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()  
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lessons']
 
 class SingleCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields =[ 'user', 'description', 'price', 'lesson_numbers', 'refund_policy']
+        fields = ['user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lessons']
 
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
