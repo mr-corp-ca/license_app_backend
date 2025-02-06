@@ -150,14 +150,20 @@ class SearchSchoolSerializer(serializers.ModelSerializer):
     # license_category = serializers.SerializerMethodField()
     courses = serializers.SerializerMethodField()
     school_rating = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()  # Added logo field
 
     class Meta:
         model = SchoolProfile
         fields = [
-            'id', 'institute_name',
+            'id', 'institute_name','image',
             'courses', 'school_rating', 'user'
         ]
-
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.user.logo:
+            logo_url = obj.user.logo.url
+            return request.build_absolute_uri(logo_url) if request else logo_url
+        return None
     # def get_license_category(self, obj):
     #     categories = obj.license_category.all()
     #     return [{'id': category.id, 'name': category.name} for category in categories]
