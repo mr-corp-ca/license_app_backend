@@ -339,3 +339,32 @@ class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
         return representation
     
 
+class SubscriptionPackagePlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPackagePlan
+        fields = ['id', 'price', 'package_plan']
+
+class SelectedSubscriptionPackagePlanSerializer(serializers.ModelSerializer):
+    package_plan = SubscriptionPackagePlanSerializer(read_only=True)
+
+    class Meta:
+        model = SelectedSubscriptionPackagePaln
+        fields = ['id', 'user', 'package_plan', 'expired']
+
+class DiscountCouponSerializer(serializers.ModelSerializer):
+    final_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DiscountCoupons
+        fields = ['code', 'discount_price', 'is_used', 'expiration_time', 'final_price']
+
+    def get_final_price(self, obj):
+        plan_id = self.context.get('plan_id')
+        if not plan_id:
+            return None
+
+        plan = SubscriptionPackagePlan.objects.filter(id=plan_id).first()
+        if not plan:
+            return None
+
+        return max(0, plan.price - obj.discount_price)

@@ -1,9 +1,12 @@
 from django.db import models
-
-from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES, COURSE_STATUS_CHOICES
-from user_management_app.models import User
+from django.apps import apps
+from course_management_app.constants import AUDIENCE_CHOICES, OFFER_TYPE_CHOICES, COURSE_STATUS_CHOICES,PACKAGE_PLAN_CHOICE, PACKAGE_STATUS
 from utils_app.models import BaseModelWithCreatedInfo
+from user_management_app.threads import send_push_notification
+import stripe
 
+from django.conf import settings
+stripe.api_key = settings.STRIPE_SECRET_KEY
 # Create your models here.
 
 class LicenseCategory(BaseModelWithCreatedInfo):
@@ -107,13 +110,6 @@ class UserSelectedCourses(BaseModelWithCreatedInfo):
     
 
 class SubscriptionPackagePlan(BaseModelWithCreatedInfo):
-    PACKAGE_PLAN_CHOICE = [
-        ('month','Month'),
-        ('half-year','Six-Month'),
-
-        ('year','Year'),
-    ]
-
     price = models.FloatField(default=0.0,verbose_name='Subscription Price')
     package_plan = models.CharField(max_length=255,choices=PACKAGE_PLAN_CHOICE,verbose_name='Subscription plan')
 
@@ -122,6 +118,76 @@ class SelectedSubscriptionPackagePaln(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='subscription_user')
     package_plan = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE)
     expired = models.DateTimeField(verbose_name='Package Expired')
+    package_status =  models.CharField(max_length=255, choices=PACKAGE_STATUS, default='pending')
+    stripe_secret_id = models.CharField(max_length=255, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        TransactionHistroy = apps.get_model('user_management_app', 'TransactionHistroy')
+
+        if self.package_status == 'accepted' and self.stripe_secret_id:
+            try:
+                intent = stripe.PaymentIntent.retrieve(self.stripe_secret_id)
+
+                if intent.status == 'succeeded':
+                    TransactionHistroy.objects.create(
+                        school=self.user,
+                        wallet=self.user.wallet,
+                        amount=self.package_plan.price,
+                        payment_method='stripe',
+                        transaction_type='deposit',
+                        transaction_status='accepted'
+                    )
+                    self.package_status = 'accepted'
+                    super().save(*args, **kwargs)  
+                    send_push_notification(
+                        self.user,
+                        "Subscription Approved",
+                        f"Your subscription for {self.package_plan.package_plan} has been successfully activated.",
+                        "accepted"
+                    )
+
+                else:
+                    self.package_status = 'rejected'
+                    super().save(*args, **kwargs)
+                    send_push_notification(
+                        self.user,
+                        "Subscription Rejected",
+                        "Your subscription payment failed. Please try again.",
+                        "rejected"
+                    )
+
+            except stripe.error.CardError:
+                self.package_status = 'rejected'
+                super().save(*args, **kwargs)
+                send_push_notification(
+                    self.user,
+                    "Subscription Rejected",
+                    "Your payment card was declined. Please use a different card.",
+                    "rejected"
+                )
+
+            except stripe.error.StripeError as e:
+                self.package_status = 'rejected'
+                super().save(*args, **kwargs)
+                send_push_notification(
+                    self.user,
+                    "Subscription Error",
+                    f"Payment failed due to Stripe error: {str(e)}",
+                    "rejected"
+                )
+
+        elif self.package_status == 'rejected':
+            send_push_notification(
+                self.user,
+                "Subscription Rejected",
+                "Your subscription request has been rejected by the admin.",
+                "rejected"
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.full_name} - {self.package_plan.package_plan} ({self.package_status})"
 
 class LearnerSelectedPackage(BaseModelWithCreatedInfo):
     user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='learner_user')

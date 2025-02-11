@@ -3,6 +3,8 @@ from .serializers import *
 from django.db.models import Q
 from rest_framework import status
 from datetime import date
+from django.utils.timezone import now
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -420,7 +422,7 @@ class SchoolPackageDetailAPIView(APIView):
             status=status.HTTP_404_NOT_FOUND)
 
         serializer = SchoolPackageDetailSerializer(package)
-        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"success": True, 'response' : { "data": serializer.data}}, status=status.HTTP_200_OK)
 
 class CoursesListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]
@@ -441,7 +443,7 @@ class PolicyApiview(APIView):
             
             if general_policy:
                 serializer = GeneralPolicySerializer(general_policy)
-                return Response({'success':True, "data": serializer.data}, status=status.HTTP_200_OK)
+                return Response({'success':True, 'response' : {"data": serializer.data}}, status=status.HTTP_200_OK)
             else:
                 return Response({"status": False, "response": {"message": "No Package found with this ID."}},status=status.HTTP_404_NOT_FOUND)
         
@@ -496,14 +498,14 @@ class InstructorLessonsAPIView(APIView):
 
             if not lesson_id or not lesson_name:
                 return Response(
-                    {"success": False, "message": "Lesson ID and lesson name are required."},
+                    {"success": False, 'response' : {"message": "Lesson ID and lesson name are required."}},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             lesson = LearnerBookingSchedule.objects.filter(id=lesson_id).first()
             if not lesson:
                 return Response(
-                    {"success": False, "message": "Lesson not found."},
+                    {"success": False, 'response' : {"message": "Lesson not found."}},
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
@@ -512,7 +514,7 @@ class InstructorLessonsAPIView(APIView):
             lesson.save()
 
             return Response(
-                {"success": True, "message": "Lesson name updated successfully."},
+                {"success": True, 'response' : {"message": "Lesson name updated successfully."}},
                 status=status.HTTP_200_OK,
             )
         except Exception as e:
@@ -520,3 +522,82 @@ class InstructorLessonsAPIView(APIView):
                 {"success": False, "message": f"An error occurred: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class SubscriptionPackageListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        packages = SubscriptionPackagePlan.objects.all()
+        serializer = SubscriptionPackagePlanSerializer(packages, many=True)
+        return Response({'status': True, 'response' : {'data': serializer.data}}, status=status.HTTP_200_OK)
+
+
+class ApplyDiscountAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        discount_code = request.data.get('discount_code', None)
+        plan_id = request.data.get('package_id', None)
+        
+        plan = SubscriptionPackagePlan.objects.filter(id=plan_id).first()
+        if not plan:
+            return Response({'status': False, 'response': {'message': 'Invalid subscription plan.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        coupon = DiscountCoupons.objects.filter(code=discount_code, is_used=False).first()
+        if not coupon:
+            return Response({'status': False, 'response': {'message': 'Invalid discount code.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        if coupon.is_expired():
+            return Response({'status': False, 'response': {'message': 'This discount code has expired.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        if coupon.package and coupon.package.package_plan != plan.package_plan:
+            return Response({'status': False, 'response': {'message': 'This discount code is not valid for the selected plan.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        coupon.school = user  
+        coupon.is_used = True  
+        coupon.save()
+
+        serialized_coupon = DiscountCouponSerializer(coupon, context={'plan_id': plan_id}).data
+
+        return Response({'status': True, 'response':{'data' : serialized_coupon}}, status=status.HTTP_200_OK)
+
+  
+
+class SubscribeToPlanAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        plan_id = request.data.get('package_id')
+        stripe_secret_id = request.data.get('stripe_secret_id')
+
+        plan = SubscriptionPackagePlan.objects.filter(id=plan_id).first()
+        if not plan:
+            return Response({'status': False, 'response' : {'message': 'Invalid subscription plan.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_subscription = SelectedSubscriptionPackagePaln.objects.filter(user=user).order_by('-created_at').first()
+        if existing_subscription and existing_subscription.expired > now():
+            return Response({'status': False, 'response' : {'message': 'You already have an active subscription.'}}, status=status.HTTP_400_BAD_REQUEST)
+
+        expiry_date = {
+            'month': now() + timedelta(days=30),
+            'half-year': now() + timedelta(days=182),
+            'year': now() + timedelta(days=365)
+        }.get(plan.package_plan, now() + timedelta(days=30))
+
+        subscription = SelectedSubscriptionPackagePaln.objects.create(
+            user=user, 
+            package_plan=plan, 
+            expired=expiry_date,
+            stripe_secret_id=stripe_secret_id, 
+            package_status='pending'
+        )
+
+        return Response({
+            'status': True,
+            'response': {
+                'message': 'Subscription request sent to admin for approval.'
+            }
+        }, status=status.HTTP_201_CREATED)
