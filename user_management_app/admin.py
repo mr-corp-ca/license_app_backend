@@ -69,3 +69,17 @@ class ReferralAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "unique_code", "joined_by")
     list_filter = ("total_earnings",)
     readonly_fields = ("unique_code",)
+
+
+@admin.register(DiscountCoupons)
+class DiscountCouponsAdmin(admin.ModelAdmin):
+    list_display = ('code', 'school', 'calling_agent', 'package', 'discount_price', 'is_used', 'created_at', 'expiration_time')
+    search_fields = ('code', 'school__full_name', 'calling_agent__full_name', 'package__package_plan__package_plan')
+    list_filter = ('is_used', 'expiration_time', 'created_at')
+    readonly_fields = ('code', 'created_at')
+    ordering = ('-created_at',)
+
+    def is_expired(self, obj):
+        return obj.is_expired()
+    is_expired.boolean = True
+    is_expired.short_description = "Expired?"

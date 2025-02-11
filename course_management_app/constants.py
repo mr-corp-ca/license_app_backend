@@ -17,3 +17,16 @@ COURSE_STATUS_CHOICES = [
         ('completed', 'Completed'),
         ('rejected', 'Rejected'),
     ]
+
+PACKAGE_PLAN_CHOICE = [
+        ('month','Month'),
+        ('half-year','Six-Month'),
+
+        ('year','Year'),
+    ]
+
+PACKAGE_STATUS = [
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+]

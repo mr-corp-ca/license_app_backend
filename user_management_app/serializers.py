@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.db.models import Avg
-from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory
+from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory, SelectedSubscriptionPackagePaln
 from decimal import Decimal
+from django.utils.timezone import now, timedelta
 from timing_slot_app.models import LearnerBookingSchedule
 from utils_app.serializers import CitySerializer, ProvinceSerializer
 from .models import *
@@ -73,10 +74,11 @@ class SchoolUserSerializer(serializers.ModelSerializer):
     city = serializers.SerializerMethodField()
     province = serializers.SerializerMethodField()
     school_profile = serializers.SerializerMethodField()
+    has_active_subscription = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'logo',
-                  'phone_number', 'province', 'city', 'school_profile']
+                  'phone_number', 'province', 'city', 'school_profile', 'has_active_subscription']
 
     def get_city(self, instance):
         if instance.city:
@@ -96,6 +98,10 @@ class SchoolUserSerializer(serializers.ModelSerializer):
             return SchoolProfileSerializer(profile).data
         else:
             return None
+        
+    def get_has_active_subscription(self, instance):
+        subscription = SelectedSubscriptionPackagePaln.objects.filter(user=instance).order_by('-created_at').first()
+        return bool(subscription and subscription.expired > now())
         
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:

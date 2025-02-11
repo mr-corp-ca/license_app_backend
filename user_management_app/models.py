@@ -1,8 +1,11 @@
 from django.db import models
 # from course_management_app.models import Course
 from utils_app.models import BaseModelWithCreatedInfo
+from django.utils.timezone import now
+from datetime import timedelta
 from django.utils.text import slugify
 from user_management_app.constants import *
+from course_management_app.models import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class MyAccountManager(BaseUserManager):
@@ -210,3 +213,28 @@ class Referral(BaseModelWithCreatedInfo):
 
     def __str__(self):
         return f"{self.user.username}'s Referral Code"
+
+
+class DiscountCoupons(BaseModelWithCreatedInfo):
+    school = models.ForeignKey(User, on_delete=models.CASCADE, related_name="discount_offer_user", verbose_name="school", null=True, blank=True)
+    calling_agent = models.ForeignKey(User, on_delete=models.CASCADE, related_name="discount_buyer_user", verbose_name='Calling Agent')
+    package = models.ForeignKey(SubscriptionPackagePlan, on_delete=models.CASCADE, related_name="Subscribed_Package", verbose_name="Selected Subscription", null=True, blank=True)
+    discount_price = models.FloatField(default=0.0, null=True, blank=True, help_text='Discount Price')
+    is_used = models.BooleanField(default=False)
+    code = models.CharField(max_length=20, null=True, blank=True, unique=True)
+    expiration_time = models.PositiveIntegerField(default=24, help_text="Coupon validity in hours") 
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_unique_code()
+        super().save(*args, **kwargs)
+
+    def generate_unique_code(self):
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            if not DiscountCoupons.objects.filter(code=code).exists():
+                return code
+
+    def is_expired(self):
+        """Check if the coupon is expired based on school-defined expiration time."""
+        return now() > self.created_at + timedelta(hours=self.expiration_time)
