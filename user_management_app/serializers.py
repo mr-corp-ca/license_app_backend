@@ -552,6 +552,7 @@ class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
         fields = ['id', 'balance', 'paid_amount', 'pending_amount', 'recent_transactions']
+        
 
     def get_paid_amount(self, obj):
         return TransactionHistroy.objects.filter(wallet=obj, transaction_status="accepted").aggregate(total_paid=Sum('amount'))['total_paid'] or 0
