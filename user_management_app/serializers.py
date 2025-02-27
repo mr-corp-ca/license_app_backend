@@ -543,3 +543,36 @@ class RoadTestApprovalSerializer(serializers.Serializer):
         )
 
         return instance
+    
+class WalletSerializer(serializers.ModelSerializer):
+    paid_amount = serializers.SerializerMethodField()
+    pending_amount = serializers.SerializerMethodField()
+    recent_transactions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Wallet
+        fields = ['id', 'balance', 'paid_amount', 'pending_amount', 'recent_transactions']
+        
+
+    def get_paid_amount(self, obj):
+        return TransactionHistroy.objects.filter(wallet=obj, transaction_status="accepted").aggregate(total_paid=Sum('amount'))['total_paid'] or 0
+
+    def get_pending_amount(self, obj):
+        return TransactionHistroy.objects.filter(wallet=obj, transaction_status="pending").aggregate(total_pending=Sum('amount'))['total_pending'] or 0
+
+    def get_recent_transactions(self, obj):
+        transactions = TransactionHistroy.objects.filter(wallet=obj).order_by('-created_at')[:4]
+        return RecentTransactionSerializer(transactions, many=True).data
+
+
+
+class RecentTransactionSerializer(serializers.ModelSerializer):
+    learner_name = serializers.CharField(source="wallet.user.full_name", read_only=True)
+    learner_profile = serializers.ImageField(source="wallet.user.logo", read_only=True)
+    transaction_status = serializers.CharField(source="get_transaction_status_display", read_only=True)
+    transaction_type = serializers.CharField(source="get_transaction_type_display", read_only=True)
+    payment_method = serializers.CharField(source="get_payment_method_display", read_only=True)
+
+    class Meta:
+        model = TransactionHistroy
+        fields = ['id', 'learner_name', 'learner_profile', 'amount', 'payment_method', 'transaction_type', 'transaction_status', 'created_at']

@@ -1130,3 +1130,76 @@ class RoadTestApprovalAPIView(APIView):
             return Response({'success': True, 'response': {'message': f'Road test request {action}ed successfully.'}}, status=status.HTTP_200_OK)
 
         return Response({'success':False ,'response' : {'errors':serializer.errors}}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class WalletAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.user_type != 'school':
+            return Response({'success': False, 'response': {'message': 'Only schools can access this'}}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            wallet = Wallet.objects.get(user=user)
+            serializer = WalletSerializer(wallet)
+
+            return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
+
+        except Wallet.DoesNotExist:
+            return Response({'success': False, 'response': {'message': 'Wallet not found'}}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class TransactionListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.user_type != 'school':
+            return Response({'success': False, 'response': {'message': 'Only schools can view transactions'}}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            transactions = TransactionHistroy.objects.filter(wallet__user__user_type="learner", school=user).order_by('-created_at')
+
+            serializer = TransactionSerializer(transactions, many=True)
+            return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
+
+        except TransactionHistroy.DoesNotExist:
+            return Response({'success': False, 'response': {'message': 'No transaction found'}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class WithdrawalRequestAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        amount = request.data.get("amount")
+
+        if user.user_type != "school":
+            return Response({"success": False,  "response" : {"message": "Only schools can withdraw"}}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            with transaction.atomic():
+                wallet = Wallet.objects.get(user=user)
+                if wallet.balance < Decimal(amount):
+                    return Response({"success": False, "response" : { "message": "Insufficient balance"}}, status=status.HTTP_400_BAD_REQUEST)
+
+                wallet.balance -= Decimal(amount)
+                wallet.save()
+
+                transaction_history = TransactionHistroy.objects.create(
+                    school=user,
+                    wallet=wallet,
+                    amount=Decimal(amount),
+                    transaction_type="withdrawal",
+                    transaction_status="pending",
+                    payment_method="stripe",
+                )
+
+                return Response({"success": True, "response" : {"message": "Withdrawal request submitted, awaiting admin approval."}}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"success": False, "response" : {"message": str(e)}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

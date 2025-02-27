@@ -27,5 +27,7 @@ urlpatterns = [
     path('RoadTestRequests/', RoadTestListAPIView.as_view(), name='road-test-list'),
     path('RoadTestApproval/<int:id>/', RoadTestApprovalAPIView.as_view(), name='road-test-approve'),
     path('CancleReport/',LearnerReportAPIVIEW.as_view()),
-    path('Referrals/',ReferralAPIView.as_view())
+    path('Referrals/',ReferralAPIView.as_view()),
+    path('Wallet/',WalletAPIView.as_view()),
+    # path('WalletHistory/',WalletHistoryAPIView.as_view()),
 ]
