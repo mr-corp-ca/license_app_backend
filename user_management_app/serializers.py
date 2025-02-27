@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db.models import Avg
+from django.db.models import Avg, Sum
 from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory, SelectedSubscriptionPackagePaln
 from decimal import Decimal
 from django.utils.timezone import now, timedelta
@@ -552,7 +552,7 @@ class WalletSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wallet
         fields = ['id', 'balance', 'paid_amount', 'pending_amount', 'recent_transactions']
-        
+
 
     def get_paid_amount(self, obj):
         return TransactionHistroy.objects.filter(wallet=obj, transaction_status="accepted").aggregate(total_paid=Sum('amount'))['total_paid'] or 0
