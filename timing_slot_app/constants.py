@@ -43,37 +43,98 @@ def get_day_name(date_input):
         return ""
 
 
+# def get_schedule_times(schedule):
+#     from timing_slot_app.models import LearnerBookingSchedule
+
+#     start_time = timezone.datetime.combine(schedule.date, schedule.start_time)
+#     end_time = timezone.datetime.combine(schedule.date, schedule.end_time)
+
+#     if schedule.launch_break_start and schedule.launch_break_end:
+#         launch_break_start = timezone.datetime.combine(schedule.date, schedule.launch_break_start)
+#         launch_break_end = timezone.datetime.combine(schedule.date, schedule.launch_break_end)
+#     else:
+#         launch_break_start = launch_break_end = None
+
+#     learner_bookings = LearnerBookingSchedule.objects.filter(date=schedule.date)
+
+#     available_times = []
+
+#     current_time = start_time
+#     while current_time <= end_time:
+#         conflict = learner_bookings.filter(slot__gte=current_time.time(), slot__lt=(current_time + timedelta(minutes=15)).time()).exists()
+
+#         if not conflict:
+#             if launch_break_start and launch_break_end:
+#                 if not (launch_break_start <= current_time <= launch_break_end):
+#                     available_times.append(current_time.time())
+#             else:
+#                 available_times.append(current_time.time())
+        
+#         current_time += timedelta(minutes=schedule.lesson_gap + (schedule.lesson_duration * 60))
+
+#     return available_times
+
+
 def get_schedule_times(schedule):
     from timing_slot_app.models import LearnerBookingSchedule
 
+    # Convert all times to datetime objects for comparison
     start_time = timezone.datetime.combine(schedule.date, schedule.start_time)
     end_time = timezone.datetime.combine(schedule.date, schedule.end_time)
-
-    if schedule.launch_break_start and schedule.launch_break_end:
-        launch_break_start = timezone.datetime.combine(schedule.date, schedule.launch_break_start)
-        launch_break_end = timezone.datetime.combine(schedule.date, schedule.launch_break_end)
-    else:
-        launch_break_start = launch_break_end = None
-
+    
+    # Handle break times
+    launch_break_start = timezone.datetime.combine(schedule.date, schedule.launch_break_start) if schedule.launch_break_start else None
+    launch_break_end = timezone.datetime.combine(schedule.date, schedule.launch_break_end) if schedule.launch_break_end else None
+    
+    # Handle extra space times
+    extra_space_start = timezone.datetime.combine(schedule.date, schedule.extra_space_start) if schedule.extra_space_start else None
+    extra_space_end = timezone.datetime.combine(schedule.date, schedule.extra_space_end) if schedule.extra_space_end else None
+    
+    # Get existing bookings
     learner_bookings = LearnerBookingSchedule.objects.filter(date=schedule.date)
-
+    
     available_times = []
-
     current_time = start_time
-    while current_time <= end_time:
-        conflict = learner_bookings.filter(slot__gte=current_time.time(), slot__lt=(current_time + timedelta(minutes=15)).time()).exists()
-
-        if not conflict:
-            if launch_break_start and launch_break_end:
-                if not (launch_break_start <= current_time <= launch_break_end):
-                    available_times.append(current_time.time())
-            else:
-                available_times.append(current_time.time())
+    
+    # Calculate lesson duration in minutes
+    lesson_duration_minutes = schedule.lesson_duration * 60 if schedule.lesson_duration else 0
+    lesson_gap_minutes = schedule.lesson_gap if schedule.lesson_gap else 0
+    
+    while current_time < end_time:
+        lesson_end_time = current_time + timedelta(minutes=lesson_duration_minutes)
         
-        current_time += timedelta(minutes=schedule.lesson_gap + (schedule.lesson_duration * 60))
-
+        # Skip if lesson would go past end time
+        if lesson_end_time > end_time:
+            break
+            
+        # Check if current time is during break
+        is_during_break = (
+            launch_break_start and launch_break_end and 
+            (launch_break_start <= current_time < launch_break_end or
+             launch_break_start < lesson_end_time <= launch_break_end)
+        )
+        
+        # Check if current time is during extra space
+        is_during_extra_space = (
+            extra_space_start and extra_space_end and 
+            (extra_space_start <= current_time < extra_space_end or
+             extra_space_start < lesson_end_time <= extra_space_end)
+        )
+        
+        # Check for booking conflicts
+        has_conflict = learner_bookings.filter(
+            slot__gte=current_time.time(),
+            slot__lt=lesson_end_time.time()
+        ).exists()
+        
+        # Add to available times if no conflicts
+        if not is_during_break and not is_during_extra_space and not has_conflict:
+            available_times.append(current_time.time())
+        
+        # Move to next potential slot
+        current_time = lesson_end_time + timedelta(minutes=lesson_gap_minutes)
+    
     return available_times
-
 
 
 def calculate_end_time(start_time, operation_hour, lesson_duration, lesson_gap, 
