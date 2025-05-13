@@ -6,6 +6,7 @@ class MonthlyScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonthlySchedule
         fields = ['date', 'start_time', 'end_time', 'launch_break_start', 'launch_break_end', 'extra_space_start', 'extra_space_end', 'vehicle', 'lesson_gap', 'lesson_duration', 'extra_space_end', 'operation_hour']
+        extra_kwargs = {'end_time': {'read_only': True}}
 
 class GETMonthlyScheduleSerializer(serializers.ModelSerializer):
 

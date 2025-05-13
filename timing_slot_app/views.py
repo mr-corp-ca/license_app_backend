@@ -22,7 +22,7 @@ class MonthlyScheduleAPIView(APIView):
             for item in serializer.validated_data:
                 try:
                     date_str = item['date'].strftime('%Y-%m-%d')
-                    
+
                     # Calculate end_time based on operation_hour if provided
                     if 'operation_hour' in item and item['operation_hour']:
                         operation_hours = int(item['operation_hour'])
@@ -32,44 +32,85 @@ class MonthlyScheduleAPIView(APIView):
                     else:
                         item['end_time'] = item.get('end_time', item['start_time'])
 
-                    # Calculate all lesson time slots
+                    # Calculate all lesson time slots first
                     lesson_slots = self.calculate_lesson_slots(item)
 
-                    # Validate breaks against lessons
-                    if item.get('launch_break_start') and item.get('launch_break_end'):
-                        self.validate_break_time(
-                            item['launch_break_start'],
-                            item['launch_break_end'],
-                            lesson_slots,
-                            "Launch break",
-                            date_str
-                        )
+                    # Get all valid break start times (lesson end times)
+                    valid_break_times = [slot['end'] for slot in lesson_slots if slot['type'] == 'lesson']
+                    
+                    # If no lessons, break times must be None
+                    if not valid_break_times:
+                        if item.get('launch_break_start') or item.get('launch_break_end'):
+                            raise ValueError(
+                                f"On {date_str}: Cannot set break times when there are no lessons scheduled"
+                            )
+                        if item.get('extra_space_start') or item.get('extra_space_end'):
+                            raise ValueError(
+                                f"On {date_str}: Cannot set extra space times when there are no lessons scheduled"
+                            )
+                    else:
+                        # Validate launch break times
+                        if item.get('launch_break_start') or item.get('launch_break_end'):
+                            if not (item.get('launch_break_start') and item.get('launch_break_end')):
+                                raise ValueError(
+                                    f"On {date_str}: Both launch break start and end times must be provided"
+                                )
+                            
+                            if item['launch_break_start'] not in valid_break_times:
+                                raise ValueError(
+                                    f"On {date_str}: Launch break must start exactly when a lesson ends. "
+                                    f"Valid start times: {', '.join([t.strftime('%H:%M') for t in valid_break_times])}"
+                                )
+                            
+                            # Ensure break end is after start and within schedule
+                            if item['launch_break_start'] >= item['launch_break_end']:
+                                raise ValueError(
+                                    f"On {date_str}: Launch break end time must be after start time"
+                                )
+                            
+                            if item['launch_break_end'] > item['end_time']:
+                                raise ValueError(
+                                    f"On {date_str}: Launch break must end within scheduled hours "
+                                    f"({item['end_time'].strftime('%H:%M')})"
+                                )
 
-                    # Validate extra spaces against lessons
-                    if item.get('extra_space_start') and item.get('extra_space_end'):
-                        self.validate_break_time(
-                            item['extra_space_start'],
-                            item['extra_space_end'],
-                            lesson_slots,
-                            "Extra space",
-                            date_str
-                        )
+                        # Validate extra space times
+                        if item.get('extra_space_start') or item.get('extra_space_end'):
+                            if not (item.get('extra_space_start') and item.get('extra_space_end')):
+                                raise ValueError(
+                                    f"On {date_str}: Both extra space start and end times must be provided"
+                                )
+                            
+                            if item['extra_space_start'] not in valid_break_times:
+                                raise ValueError(
+                                    f"On {date_str}: Extra space must start exactly when a lesson ends. "
+                                    f"Valid start times: {', '.join([t.strftime('%H:%M') for t in valid_break_times])}"
+                                )
+                            
+                            # Ensure extra space end is after start and within schedule
+                            if item['extra_space_start'] >= item['extra_space_end']:
+                                raise ValueError(
+                                    f"On {date_str}: Extra space end time must be after start time"
+                                )
+                            
+                            if item['extra_space_end'] > item['end_time']:
+                                raise ValueError(
+                                    f"On {date_str}: Extra space must end within scheduled hours "
+                                    f"({item['end_time'].strftime('%H:%M')})"
+                                )
 
-                    # Validate breaks and extra spaces don't overlap
-                    if (item.get('launch_break_start') and item.get('launch_break_end') and
-                        item.get('extra_space_start') and item.get('extra_space_end')):
-                        self.validate_no_overlap(
-                            item['launch_break_start'],
-                            item['launch_break_end'],
-                            item['extra_space_start'],
-                            item['extra_space_end'],
-                            "Launch break",
-                            "Extra space",
-                            date_str
-                        )
-
-                    # Validate all time slots are within schedule bounds
-                    self.validate_time_bounds(item, date_str)
+                        # Validate breaks and extra spaces don't overlap
+                        if (item.get('launch_break_start') and item.get('launch_break_end') and
+                            item.get('extra_space_start') and item.get('extra_space_end')):
+                            self.validate_no_overlap(
+                                item['launch_break_start'],
+                                item['launch_break_end'],
+                                item['extra_space_start'],
+                                item['extra_space_end'],
+                                "Launch break",
+                                "Extra space",
+                                date_str
+                            )
 
                     # Save the schedule
                     item['user'] = request.user
@@ -150,36 +191,32 @@ class MonthlyScheduleAPIView(APIView):
     def validate_break_time(self, break_start, break_end, lesson_slots, break_name, date_str):
         """
         Validate break/extra space time against lessons
-        Allows break to start exactly when lesson ends
+        - Break must start exactly when a lesson ends or at schedule start
+        - Entire break period must not overlap with any lessons
         """
-        # Get all lesson end times as valid break start times
-        valid_start_times = [slot['end'] for slot in lesson_slots if slot['type'] == 'lesson']
+        # Get all valid break start times (lesson end times and schedule start)
+        valid_start_times = []
+        if lesson_slots:
+            valid_start_times.append(lesson_slots[0]['start'])  # Schedule start time
+            valid_start_times.extend([slot['end'] for slot in lesson_slots if slot['type'] == 'lesson'])
         
-        # Check if break starts at a lesson end time
-        starts_at_lesson_end = any(break_start == end_time for end_time in valid_start_times)
+        # Check if break starts at a valid time
+        starts_at_valid_time = any(break_start == start_time for start_time in valid_start_times)
         
-        # If break doesn't start at a lesson end, check if it's valid
-        if not starts_at_lesson_end:
-            # Check if break starts at the beginning of the schedule
-            if lesson_slots and break_start == lesson_slots[0]['start']:
-                starts_at_lesson_end = True
-            else:
-                available_starts = [t.strftime('%H:%M') for t in valid_start_times]
-                error = ValueError(
-                    f"On {date_str}: {break_name} must start when a lesson ends. "
-                    f"Available start times: {', '.join(available_starts)}"
-                )
-                error.available_times = available_starts
-                raise error
+        if not starts_at_valid_time:
+            available_starts = sorted(list(set(t.strftime('%H:%M') for t in valid_start_times)))
+            error = ValueError(
+                f"On {date_str}: {break_name} must start when a lesson ends or at schedule start. "
+                f"Available start times: {', '.join(available_starts)}"
+            )
+            error.available_times = available_starts
+            raise error
         
         # Check if break overlaps with any lessons
         for slot in lesson_slots:
             if slot['type'] == 'lesson':  # Only check against lessons, not gaps
-                # Allow break to start exactly when lesson ends
-                if break_start == slot['end']:
-                    continue
                 if not (break_end <= slot['start'] or break_start >= slot['end']):
-                    available_starts = [t.strftime('%H:%M') for t in valid_start_times]
+                    available_starts = sorted(list(set(t.strftime('%H:%M') for t in valid_start_times)))
                     error = ValueError(
                         f"On {date_str}: {break_name} overlaps with lesson {slot['formatted']}. "
                         f"Available start times: {', '.join(available_starts)}"
