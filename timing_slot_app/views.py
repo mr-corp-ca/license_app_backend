@@ -283,56 +283,57 @@ class MonthlyScheduleAPIView(APIView):
         return available_slots if available_slots else ["No available time slots"]
     
     def get(self, request):
-        print("Received Query Params:", request.query_params)
         date = request.query_params.get('date')
-        start_time = request.query_params.get('start_time')
-        operation_hour = request.query_params.get('operation_hour')
-        lesson_duration = request.query_params.get('lesson_duration')
-
-        if not date or not start_time or not operation_hour or not lesson_duration:
+        
+        if not date:
             return Response(
-                {'success': False, 'response': {'message': 'Missing required parameters'}},
+                {'success': False, 'message': 'Date parameter is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            # Convert the date string to a date object
-            date = datetime.strptime(date, "%Y-%m-%d").date()
-            start_time = datetime.strptime(start_time, "%H:%M").time()
-            operation_hour = int(operation_hour)
-            lesson_duration = int(lesson_duration)
+            # Validate date format
+            datetime.strptime(date, "%Y-%m-%d").date()
         except ValueError:
             return Response(
-                {'success': False, 'response': {'message': 'Invalid parameter format'}},
+                {'success': False, 'message': 'Invalid date format. Use YYYY-MM-DD'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        lesson_gap = int(request.query_params.get('lesson_gap', 0))
-        launch_break_start = request.query_params.get('launch_break_start')
-        launch_break_end = request.query_params.get('launch_break_end')
-        extra_space_start = request.query_params.get('extra_space_start')
-        extra_space_end = request.query_params.get('extra_space_end')
-
-        launch_break_start = convert_time(launch_break_start)
-        launch_break_end = convert_time(launch_break_end)
-        extra_space_start = convert_time(extra_space_start)
-        extra_space_end = convert_time(extra_space_end)
-
-        schedule_data = calculate_end_time(
-            start_time, operation_hour, lesson_duration, lesson_gap,
-            launch_break_start, launch_break_end, extra_space_start, extra_space_end
-        )
-
-        # Calculate the day name based on the provided date
-        day_name = get_day_name(date)
-
-        # Add day name to the schedule data
-        schedule_data['day_name'] = day_name
-
-        return Response(
-            {"success": True, "response": {"data": schedule_data}},
-            status=status.HTTP_200_OK
-        )
+        try:
+            # Get single schedule for the user and date
+            schedule = MonthlySchedule.objects.get(
+                user=request.user,
+                date=date
+            )
+            serializer = GETMonthlyScheduleSerializer(schedule)
+            
+            return Response(
+                {
+                    'success': True,
+                    'data': serializer.data,
+                    'message': 'Schedule retrieved successfully'
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except MonthlySchedule.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'message': 'No schedule found for this date',
+                    'data': None
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    'success': False,
+                    'message': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class LearnerMonthlyScheduleView(APIView):
     permission_classes = [IsAuthenticated]
