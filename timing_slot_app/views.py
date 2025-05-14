@@ -141,8 +141,55 @@ class MonthlyScheduleAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    # def calculate_lesson_slots(self, item):
+    #     """Calculate all possible lesson slots based on schedule, including gaps"""
+    #     lesson_slots = []
+    #     if not item.get('lesson_duration'):
+    #         return lesson_slots
+
+    #     lesson_duration = item['lesson_duration']
+    #     lesson_gap = item.get('lesson_gap', 0)
+    #     current_time = item['start_time']
+    #     end_time = item['end_time']
+
+    #     while True:
+    #         lesson_end = (datetime.combine(datetime.today(), current_time) + 
+    #                     timedelta(hours=lesson_duration)).time()
+            
+    #         if lesson_end > end_time:
+    #             break
+            
+    #         lesson_slots.append({
+    #             'type': 'lesson',
+    #             'start': current_time,
+    #             'end': lesson_end,
+    #             'formatted': f"{current_time.strftime('%H:%M')}-{lesson_end.strftime('%H:%M')}"
+    #         })
+            
+    #         if lesson_gap > 0:
+    #             gap_end = (datetime.combine(datetime.today(), lesson_end) + 
+    #                      timedelta(minutes=lesson_gap)).time()
+                
+    #             if gap_end <= end_time:
+    #                 lesson_slots.append({
+    #                     'type': 'gap',
+    #                     'start': lesson_end,
+    #                     'end': gap_end,
+    #                     'formatted': f"{lesson_end.strftime('%H:%M')}-{gap_end.strftime('%H:%M')} (gap)"
+    #                 })
+    #                 current_time = gap_end
+    #             else:
+    #                 break
+    #         else:
+    #             current_time = lesson_end
+            
+    #         if current_time >= end_time:
+    #             break
+        
+    #     return lesson_slots
+
     def calculate_lesson_slots(self, item):
-        """Calculate all possible lesson slots based on schedule, including gaps"""
+        """Calculate all possible lesson slots based on schedule, including gaps between lessons only"""
         lesson_slots = []
         if not item.get('lesson_duration'):
             return lesson_slots
@@ -159,6 +206,7 @@ class MonthlyScheduleAPIView(APIView):
             if lesson_end > end_time:
                 break
             
+            # Add the lesson slot
             lesson_slots.append({
                 'type': 'lesson',
                 'start': current_time,
@@ -166,11 +214,18 @@ class MonthlyScheduleAPIView(APIView):
                 'formatted': f"{current_time.strftime('%H:%M')}-{lesson_end.strftime('%H:%M')}"
             })
             
-            if lesson_gap > 0:
-                gap_end = (datetime.combine(datetime.today(), lesson_end) + 
-                         timedelta(minutes=lesson_gap)).time()
+            # Only add gap between lessons, not after breaks
+            if lesson_gap > 0 and lesson_end < end_time:
+                # Check if there's time for another lesson after the gap
+                potential_next_lesson_start = (datetime.combine(datetime.today(), lesson_end) + 
+                                            timedelta(minutes=lesson_gap)).time()
                 
-                if gap_end <= end_time:
+                potential_next_lesson_end = (datetime.combine(datetime.today(), potential_next_lesson_start) + 
+                                        timedelta(hours=lesson_duration)).time()
+                
+                # Only add gap if there's room for another full lesson after it
+                if potential_next_lesson_end <= end_time:
+                    gap_end = potential_next_lesson_start
                     lesson_slots.append({
                         'type': 'gap',
                         'start': lesson_end,

@@ -91,7 +91,7 @@ def get_schedule_times(schedule):
     extra_space_end = timezone.datetime.combine(schedule.date, schedule.extra_space_end) if schedule.extra_space_end else None
     
     # Get existing bookings
-    learner_bookings = LearnerBookingSchedule.objects.filter(date=schedule.date)
+    learner_bookings = LearnerBookingSchedule.objects.filter(date=schedule.date, vehicle=schedule.vehicle)
     
     available_times = []
     current_time = start_time
@@ -101,24 +101,33 @@ def get_schedule_times(schedule):
     lesson_gap_minutes = schedule.lesson_gap if schedule.lesson_gap else 0
     
     while current_time < end_time:
+        # If we're at break start time, jump to break end time
+        if launch_break_start and current_time >= launch_break_start and current_time < launch_break_end:
+            current_time = launch_break_end
+            continue
+            
+        # If we're at extra space start time, jump to extra space end time
+        if extra_space_start and current_time >= extra_space_start and current_time < extra_space_end:
+            current_time = extra_space_end
+            continue
+            
         lesson_end_time = current_time + timedelta(minutes=lesson_duration_minutes)
         
         # Skip if lesson would go past end time
         if lesson_end_time > end_time:
             break
             
-        # Check if current time is during break
-        is_during_break = (
-            launch_break_start and launch_break_end and 
-            (launch_break_start <= current_time < launch_break_end or
-             launch_break_start < lesson_end_time <= launch_break_end)
+        # Check if lesson overlaps with break or extra space
+        overlaps_break = (
+            launch_break_start and 
+            ((current_time < launch_break_end and lesson_end_time > launch_break_start) or
+             (current_time >= launch_break_start and current_time < launch_break_end))
         )
         
-        # Check if current time is during extra space
-        is_during_extra_space = (
-            extra_space_start and extra_space_end and 
-            (extra_space_start <= current_time < extra_space_end or
-             extra_space_start < lesson_end_time <= extra_space_end)
+        overlaps_extra_space = (
+            extra_space_start and 
+            ((current_time < extra_space_end and lesson_end_time > extra_space_start) or
+             (current_time >= extra_space_start and current_time < extra_space_end))
         )
         
         # Check for booking conflicts
@@ -127,8 +136,8 @@ def get_schedule_times(schedule):
             slot__lt=lesson_end_time.time()
         ).exists()
         
-        # Add to available times if no conflicts
-        if not is_during_break and not is_during_extra_space and not has_conflict:
+        # Add to available times if no conflicts and doesn't overlap with breaks/extra space
+        if not has_conflict and not overlaps_break and not overlaps_extra_space:
             available_times.append(current_time.time())
         
         # Move to next potential slot
