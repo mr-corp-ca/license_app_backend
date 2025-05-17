@@ -299,11 +299,14 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
 
 
 class SchoolProfileSerializer(serializers.ModelSerializer):
+    license_category = serializers.SerializerMethodField()
     class Meta:
         model = SchoolProfile
-        fields = ['user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']
+        fields = ['id', 'user', 'institute_name', 'instructor_name', 'license_category', 'services', 'registration_file']
 
-
+    def get_license_category(self, obj):
+        return LicenseCategorySerializer(obj.license_category.all(), many=True).data
+    
 class LearnerSelectedPackageServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service

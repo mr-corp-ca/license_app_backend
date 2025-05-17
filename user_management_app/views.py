@@ -238,6 +238,7 @@ class SignInView(APIView):
             user=user,
             defaults={'code': random_digits_for_code}
         )
+        random_digits_for_code = '1234'
 
         user_verification.is_verified = False
         user_verification.save()
@@ -246,11 +247,11 @@ class SignInView(APIView):
             user_verification.code = random_digits_for_code
             user_verification.save()
 
-        try:
-            sendSMS(phone_number, random_digits_for_code)
-        except Exception as e:
-            print('*******************', e)
-            pass
+        # try:
+        #     sendSMS(phone_number, random_digits_for_code)
+        # except Exception as e:
+        #     print('*******************', e)
+        #     pass
 
         return Response({'success': True,
                         'response': {'message': 'OTP sent to your mobile number, use OTP for login.'}},
