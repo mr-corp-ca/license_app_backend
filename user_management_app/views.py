@@ -233,12 +233,12 @@ class SignInView(APIView):
         remaining_digits = ''.join(random.choices(string.digits, k=3))
 
         random_digits_for_code = first_digit + remaining_digits
+        random_digits_for_code = '1234'
 
         user_verification, created = UserVerification.objects.get_or_create(
             user=user,
             defaults={'code': random_digits_for_code}
         )
-        random_digits_for_code = '1234'
 
         user_verification.is_verified = False
         user_verification.save()
