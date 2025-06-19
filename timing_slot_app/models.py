@@ -33,6 +33,7 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     latitude =  models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
     longitude =  models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
     date = models.DateField()
+
     road_test = models.BooleanField(default= False)
     road_test_date= models.DateField(null=True, blank=True)
     road_test_time = models.TimeField(null=True, blank=True) 
@@ -43,6 +44,7 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     hire_car_price_paid = models.BooleanField(default=False)
     hire_car_date = models.DateField(null=True,  blank=True)
     hire_car_time = models.TimeField(null=True, blank=True)
+    
     slot = models.TimeField(null=True,blank=True)
     is_completed = models.BooleanField(default=False)
     lesson_name =  models.TextField(blank=True, null=True, default='Lesson')
@@ -51,3 +53,20 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     
     def __str__(self):
         return f"{self.user} - {self.date}"
+    
+
+class SpecialLesson(BaseModelWithCreatedInfo):
+    user = models.ForeignKey('user_management_app.User', on_delete=models.CASCADE, related_name='specialllesson_user')
+    vehicle = models.ForeignKey('course_management_app.Vehicle', on_delete=models.CASCADE, related_name='specialllesson_vehicle')
+
+    road_test = models.BooleanField(default= False)
+    road_test_date= models.DateField(null=True, blank=True)
+    road_test_time = models.TimeField(null=True, blank=True) 
+    road_test_status = models.CharField(max_length=10, choices=ROAD_TEST_STATUS_CHOICES, default='pending')
+    special_lesson = models.BooleanField(default= False)
+    hire_car = models.BooleanField(default= False)
+    hire_car_status = models.CharField(max_length=20,choices=HIRE_CAR_STATUS,default='Pending')
+    hire_car_price_paid = models.BooleanField(default=False)
+    hire_car_price = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    hire_car_date = models.DateField(null=True,  blank=True)
+    hire_car_time = models.TimeField(null=True, blank=True)

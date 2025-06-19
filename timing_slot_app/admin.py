@@ -5,3 +5,4 @@ from timing_slot_app.models import *
 admin.site.register(MonthlySchedule)
 
 admin.site.register(LearnerBookingSchedule)
+admin.site.register(SpecialLesson)

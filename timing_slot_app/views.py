@@ -10,7 +10,7 @@ from utils_app.models import Location,Radius
 from user_management_app.models import Wallet,TransactionHistroy
 from datetime import datetime, timedelta, time
 from utils_app.serializers import LocationSerializer
-from .models import MonthlySchedule,LearnerBookingSchedule
+from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from .serializers import GETMonthlyScheduleSerializer, MonthlyScheduleSerializer
@@ -373,6 +373,9 @@ class LearnerMonthlyScheduleView(APIView):
                     )
 
                 locations = Location.objects.filter(radius=radius)
+                
+                print('**********', locations)
+
                 if not locations:
                     return Response(
                         {'success': False, 'response': {'message': 'No locations found for this radius.'}},
@@ -412,34 +415,58 @@ class LearnerMonthlyScheduleView(APIView):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
 
-
     def post(self, request):
         try:
             user = request.user
             data = request.data
 
-            if isinstance(data, list):
-                response_list = []
-
-                for item in data:
-                    response = self.process_booking(user, item)
-                    response_list.append(response)
-                    if not response.get('success'):
-                        return Response(
-                            {'success': False, 'response': response.get('message')},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-
-                return Response({'success': True, 'response': response_list[0]}, status=status.HTTP_201_CREATED)
-
-            else:
-                return Response(
-                    {'success': False, 'response': {'message': 'Invalid data format. Expected a dictionary or list.'}},
+            vehicle_id = data.get('vehicle_id')
+            if not vehicle_id:
+                return Response(  # Changed from dict to Response
+                    {'success': False, 'message': 'Please provide vehicle id in special lesson!'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            vehicle = Vehicle.objects.filter(id=vehicle_id).first()
+            if not vehicle:
+                return Response(  # Changed from dict to Response
+                    {'success': False, 'message': 'Vehicle not found!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            SpecialLesson.objects.update_or_create(
+                user=user,
+                vehicle=vehicle,
+                defaults={
+                    'road_test': data.get('road_test', False),
+                    'special_lesson': data.get('special_lesson', False),
+                    'hire_car': data.get('hire_car', False),
+                    'road_test_date': data.get('road_test_date') if data.get('road_test_date') else None,
+                    'road_test_time': data.get('road_test_time') if data.get('road_test_time') else None,
+                    'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
+                    'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
+                    'hire_car_price': data.get('hire_car_price') if data.get('hire_car_price') else None,
+                    'hire_car_price_paid': bool(data.get('hire_car_price')),                }
+            )
+
+            response_list = []
+            for item in data.get('slot_data', []):
+                response = self.process_booking(user, item)
+                response_list.append(response)
+                if not response.get('success'):
+                    return Response(
+                        {'success': False, 'response': response.get('message')},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            return Response({'success': True, 'response': response_list[0]}, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            return Response({'success': False, 'response': {'message': str(e)}}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'success': False, 'response': {'message': str(e)}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
 
     def process_booking(self, user, data):
         try:
@@ -531,12 +558,14 @@ class LearnerMonthlyScheduleView(APIView):
                     'location': selected_location,
                     'latitude': current_location_latitude,
                     'longitude': current_location_longitude,
-                    'road_test': data.get('road_test', False),
-                    'hire_car': data.get('hire_car', False),
-                    'road_test_date': data.get('road_test_date') if data.get('road_test_date') else None,
-                    'road_test_time': data.get('road_test_time') if data.get('road_test_time') else None,
-                    'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
-                    'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
+
+                    # 'road_test': data.get('road_test', False),
+                    # 'hire_car': data.get('hire_car', False),
+                    # 'road_test_date': data.get('road_test_date') if data.get('road_test_date') else None,
+                    # 'road_test_time': data.get('road_test_time') if data.get('road_test_time') else None,
+                    # 'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
+                    # 'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
+
                     'slot': data.get('slot'),
                 }
             )
@@ -545,3 +574,11 @@ class LearnerMonthlyScheduleView(APIView):
 
         except Exception as e:
             return {'success': False, 'message': str(e)}
+        
+
+class CheckCarAvalibilityView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
