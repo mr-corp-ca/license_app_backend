@@ -423,7 +423,7 @@ class LearnerMonthlyScheduleView(APIView):
             vehicle_id = data.get('vehicle_id')
             if not vehicle_id:
                 return Response(  # Changed from dict to Response
-                    {'success': False, 'message': 'Please provide vehicle id in special lesson!'},
+                    {'success': False, 'response': {'message': 'Please provide vehicle id in special lesson!'}},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -440,13 +440,20 @@ class LearnerMonthlyScheduleView(APIView):
                 defaults={
                     'road_test': data.get('road_test', False),
                     'special_lesson': data.get('special_lesson', False),
-                    'hire_car': data.get('hire_car', False),
+
+                    # 'hire_car': data.get('hire_car', False),
+
                     'road_test_date': data.get('road_test_date') if data.get('road_test_date') else None,
                     'road_test_time': data.get('road_test_time') if data.get('road_test_time') else None,
-                    'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
-                    'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
-                    'hire_car_price': data.get('hire_car_price') if data.get('hire_car_price') else None,
-                    'hire_car_price_paid': bool(data.get('hire_car_price')),                }
+                    'road_test_status': 'Pending'
+
+
+                    # 'hire_car_date': data.get('hire_car_date') if data.get('hire_car_date') else None,
+                    # 'hire_car_time': data.get('hire_car_time') if data.get('hire_car_time') else None,
+                    # 'hire_car_price': data.get('hire_car_price') if data.get('hire_car_price') else None,
+
+                    # 'hire_car_price_paid': bool(data.get('hire_car_price')),                
+                    }
             )
 
             response_list = []
@@ -576,9 +583,59 @@ class LearnerMonthlyScheduleView(APIView):
             return {'success': False, 'message': str(e)}
         
 
-class CheckCarAvalibilityView(APIView):
+
+class SpecialLessonRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def post(self, request):
         user = request.user
-        
+        data = request.data
+
+        # Validate required fields
+        vehicle_id = data.get('vehicle_id')
+        if not vehicle_id:
+            return Response(
+                {'success': False, 'response':{'message': 'Vehicle ID is required.'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if vehicle exists
+        try:
+            vehicle = Vehicle.objects.get(id=vehicle_id)
+        except Vehicle.DoesNotExist:
+            return Response(
+                {'success': False, 'response':{'message': 'Vehicle not found.'}},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Create or update special lesson
+        try:
+            special_lesson, created = SpecialLesson.objects.update_or_create(
+                user=user,
+                vehicle=vehicle,
+                defaults={
+                    'hire_car': True,
+                    'hire_car_date': data.get('hire_car_date'),
+                    'hire_car_time': data.get('hire_car_time'),
+                    'hire_car_price': data.get('hire_car_price'),
+                    'hire_car_status': 'Pending'
+                }
+            )
+            
+            return Response(
+                {
+                    'success': True, 
+                    'response': {'message': 'Special lesson request submitted successfully.'},
+                    'data': {
+                        'id': special_lesson.id,
+                        'status': 'Created' if created else 'Updated'
+                    }
+                },
+                status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            return Response(
+                {'success': False, 'message': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
