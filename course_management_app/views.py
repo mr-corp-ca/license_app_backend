@@ -45,6 +45,7 @@ class CourseApiView(APIView):
         price = request.data.get('price', 0.0)
         road_test_price = request.data.get('road_test_price', None)  # New field
         refund_policy = request.data.get('refund_policy', '').strip()
+        course_cover_image = request.data.get('course_cover_image', '')
         lesson_numbers = int(request.data.get('lesson_numbers', 0))
 
         lessons = request_data.get('lessons')
@@ -86,7 +87,9 @@ class CourseApiView(APIView):
         serializer = SingleCourseSerializer(data=course_data)
         if serializer.is_valid():
             course = serializer.save()
-            print('*********************', type(lessons))
+            if course_cover_image:
+                course.course_cover_image = course_cover_image
+                course.save()
 
             # for l in lessons:
             if lessons:
