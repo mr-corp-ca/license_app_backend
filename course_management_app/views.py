@@ -46,7 +46,22 @@ class CourseApiView(APIView):
         road_test_price = request.data.get('road_test_price', None)  # New field
         refund_policy = request.data.get('refund_policy', '').strip()
         lesson_numbers = int(request.data.get('lesson_numbers', 0))
+
         lessons = request_data.get('lessons')
+        services = request_data.get('service')
+
+
+        try:
+            if type(lessons) == str:
+                lessons = json.loads(lessons) 
+        except:
+            pass
+            
+        try:
+            if type(services) == str:
+                services = json.loads(services) 
+        except:
+            pass
 
         if len(lessons) != lesson_numbers:
             return Response(
@@ -58,6 +73,7 @@ class CourseApiView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
 
         course_data = {
             "user": user.id,
@@ -70,8 +86,14 @@ class CourseApiView(APIView):
         serializer = SingleCourseSerializer(data=course_data)
         if serializer.is_valid():
             course = serializer.save()
+            print('*********************', type(lessons))
 
-            course.lesson.set(lessons)
+            # for l in lessons:
+            if lessons:
+                course.lesson.set(lessons)
+            # for s in services:
+            if services:
+                course.service.set(services)
 
             course_data = GETSingleCourseSerializer(course)
             return Response(

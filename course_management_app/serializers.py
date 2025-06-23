@@ -222,7 +222,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class AdminLessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['id','title','image','is_deleted']
+        fields = ['id','title', 'image','is_deleted']
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True)
@@ -269,14 +269,20 @@ class SchoolPackageDetailSerializer(serializers.ModelSerializer):
 
 
 class GETSingleCourseSerializer(serializers.ModelSerializer):
+    course_cover_image = serializers.SerializerMethodField()
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lessons']
+        fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image']
 
+    def get_course_cover_image(self, instance):
+        if instance.image:
+            domain = getattr(settings, 'DOMAIN', '')
+            return f"{domain}{instance.image.url}"
+        
 class SingleCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lessons']
+        fields = ['user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image']
 
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
