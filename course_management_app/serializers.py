@@ -275,9 +275,11 @@ class GETSingleCourseSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image']
 
     def get_course_cover_image(self, instance):
-        if instance.image:
+        if instance.course_cover_image:
             domain = getattr(settings, 'DOMAIN', '')
-            return f"{domain}{instance.image.url}"
+            return f"{domain}{instance.course_cover_image.url}"
+        else:
+            return None
         
 class SingleCourseSerializer(serializers.ModelSerializer):
     class Meta:
