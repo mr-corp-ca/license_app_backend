@@ -135,13 +135,13 @@ class CourseApiView(APIView):
     def get(self, request):
         user = request.user
 
-        try:
-            school_profile = SchoolProfile.objects.get(user=user)
-        except SchoolProfile.DoesNotExist:
-            return Response(
-                {"success": False, "response": {"message": "School Profile not found!"}},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        # try:
+        #     school_profile = SchoolProfile.objects.get(user=user)
+        # except SchoolProfile.DoesNotExist:
+        #     return Response(
+        #         {"success": False, "response": {"message": "School Profile not found!"}},
+        #         status=status.HTTP_404_NOT_FOUND
+        #     )
 
         courses = Course.objects.filter(user=user).order_by('-created_at')
 
