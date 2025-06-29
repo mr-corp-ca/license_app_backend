@@ -797,8 +797,7 @@ class VehicleSelectionView(APIView):
             if not school_profile:
                 return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            # vehicles = Vehicle.objects.filter(user=school_profile.user, booking_status='free')
-            vehicles = Vehicle.objects.all()
+            vehicles = Vehicle.objects.filter(user=school_profile.user, booking_status='free')
             serializer = VehicleDetailSerializer(vehicles, many=True)
 
             return Response({
@@ -827,22 +826,21 @@ class VehicleSelectionView(APIView):
             if not school_profile:
                 return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            vehicle = Vehicle.objects.filter(id=vehicle_id, user=school_profile.user, booking_status='free').first()
+            vehicle = Vehicle.objects.filter(id=vehicle_id, booking_status='free').first()
             if not vehicle:
                 return Response({
                     'success': False,
                     'response': {'message': 'Vehicle not found, not associated with this school, or already booked.'}
                 }, status=status.HTTP_404_NOT_FOUND)
 
-            previous_vehicle = Vehicle.objects.filter(user=user).first()
-            if previous_vehicle:
-                return Response({
-                    'success': False,
-                    'response': {'message': f'You have already selected a vehicle: {previous_vehicle.name}.'}
-                }, status=status.HTTP_400_BAD_REQUEST)
+            # previous_vehicle = Vehicle.objects.filter(user=school_profile.user).first()
+            # if previous_vehicle:
+            #     return Response({
+            #         'success': False,
+            #         'response': {'message': f'You have already selected a vehicle: {previous_vehicle.name}.'}
+            #     }, status=status.HTTP_400_BAD_REQUEST)
 
             vehicle.booking_status = 'booked'
-            vehicle.user = user
             vehicle.save()
 
             return Response({
