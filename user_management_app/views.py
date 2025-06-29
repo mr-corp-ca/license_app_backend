@@ -30,6 +30,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 import stripe
 import json
+from django.db.models import Q, FloatField
+from django.db.models.functions import Cast
 from geopy.distance import geodesic
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
@@ -714,19 +716,27 @@ class SearchDrivingSchools(APIView):
                         lat_float__range=(learner_lat - 0.1, learner_lat + 0.1),
                         long_float__range=(learner_long - 0.1, learner_long + 0.1)
                     )
+
+                    # Calculate precise distances for the filtered schools
+                    learner_location = (learner_lat, learner_long)
+                    nearby_schools = []
+                    for school in schools:
+                        school_location = (school.lat_float, school.long_float)
+                        distance_in_km = geodesic(learner_location, school_location).km
+                        if distance_in_km <= 5:  # 5km radius
+                            nearby_schools.append((school, distance_in_km))
+
+                    # Sort by distance and prepare results
+                    schools = [school for school, _ in sorted(nearby_schools, key=lambda x: x[1])]
                 except (TypeError, ValueError):
                     return Response(
                         {'success': False, 'response': {'message': 'Invalid latitude or longitude.'}},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-            # Paginate results
-            paginator = self.pagination_class()
-            page = paginator.paginate_queryset(schools, request)
-            
             # Serialize results
             serialized_schools = []
-            for school in page:
+            for school in schools:
                 serializer = SearchSchoolSerializer(
                     school.schoolprofile, 
                     context={
@@ -735,20 +745,27 @@ class SearchDrivingSchools(APIView):
                     }
                 )
                 school_data = serializer.data
+                if learner_lat and learner_long:
+                    # Find and add the calculated distance
+                    distance = next((dist for s, dist in nearby_schools if s.id == school.id), None)
+                    if distance is not None:
+                        school_data['distance'] = f"{round(distance, 2)} km"
                 serialized_schools.append(school_data)
 
-            return paginator.get_paginated_response({
+            return Response({
                 'success': True,
                 'response': {
-                    'data': serialized_schools
+                    'data': serialized_schools,
+                    'count': len(serialized_schools)
                 }
-            })
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response(
                 {'success': False, 'response': {'message': str(e)}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
 class SchoolDetail(APIView):
     permission_classes = [IsAuthenticated]
 
