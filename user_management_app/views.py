@@ -797,7 +797,8 @@ class VehicleSelectionView(APIView):
             if not school_profile:
                 return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
-            vehicles = Vehicle.objects.filter(user=school_profile.user, booking_status='free')
+            # vehicles = Vehicle.objects.filter(user=school_profile.user, booking_status='free')
+            vehicles = Vehicle.objects.all()
             serializer = VehicleDetailSerializer(vehicles, many=True)
 
             return Response({
