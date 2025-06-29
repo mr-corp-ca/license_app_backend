@@ -1,15 +1,25 @@
 from course_management_app.serializers import VehicleSerializer
 from rest_framework import serializers
 from timing_slot_app.constants import get_day_name
+from user_management_app.serializers import DefaultUserSerializer
 from utils_app.models import Location
 from utils_app.serializers import LocationSerializer
-from .models import LearnerBookingSchedule, MonthlySchedule
+from .models import LearnerBookingSchedule, MonthlySchedule, SpecialLesson
 
 class MonthlyScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonthlySchedule
         fields = ['date', 'start_time', 'end_time', 'launch_break_start', 'launch_break_end', 'extra_space_start', 'extra_space_end', 'vehicle', 'lesson_gap', 'lesson_duration', 'extra_space_end', 'operation_hour']
         extra_kwargs = {'end_time': {'read_only': True}}
+
+class SpecialLessonSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    class Meta:
+        model = SpecialLesson
+        fields = ['id', 'hire_car_status', 'hire_car_price_paid', 'hire_car_price', 'hire_car_date', 'hire_car_time']
+
+    def get_user(self, instance):
+        return DefaultUserSerializer(instance.user).data
 
 class GETMonthlyScheduleSerializer(serializers.ModelSerializer):
     day_name = serializers.SerializerMethodField()

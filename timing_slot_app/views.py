@@ -13,7 +13,7 @@ from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer
+from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer
 from django.db.models import Min
 
 class MonthlyScheduleAPIView(APIView):
@@ -651,4 +651,13 @@ class MyBookedVehicleApiView(APIView):
         distinct_bookings = LearnerBookingSchedule.objects.filter(id__in=user_bookings)
 
         serializer = GETLearnerBookingScheduleSerializer(distinct_bookings, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+    
+class RequestSpecialLessonApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        lessons = SpecialLesson.objects.filter(vehicle__user=user, hire_car_status='Pending')
+        serializer = SpecialLessonSerializer(lessons, many=True)
         return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)

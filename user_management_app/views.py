@@ -665,74 +665,88 @@ class SearchDrivingSchools(APIView):
             learner_lat = request.query_params.get('learner_lat')
             learner_long = request.query_params.get('learner_long')
 
-            # Check if latitude and longitude are provided
-            learner_location = None
-            if learner_lat and learner_long:
-                try:
-                    learner_location = (float(learner_lat), float(learner_long))
-                except (TypeError, ValueError) as e:
-                    return Response(
-                        {'success': False, 'response' : {'message': 'Invalid latitude or longitude.'}},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+            # Validate numeric parameters
+            try:
+                min_price = float(min_price) if min_price else None
+                max_price = float(max_price) if max_price else None
+            except (TypeError, ValueError):
+                return Response(
+                    {'success': False, 'response': {'message': 'Invalid price range.'}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-            # Base query: Filter users with school profiles
-            schools = User.objects.filter(
-                user_type='school',
-                schoolprofile__isnull=False,
-                lat__isnull=False,
-                long__isnull=False
-            )
+            # Base query
+            schools = User.objects.filter(user_type='school').select_related('schoolprofile')
 
             # Filter by license category
             if license_category:
                 schools = schools.filter(
-                    schoolprofile__license_category__name__icontains=license_category
+                    Q(schoolprofile__license_category__name__icontains=license_category) |
+                    Q(schoolprofile__license_categories__name__icontains=license_category)
+                ).distinct()
+
+            # Filter by price range
+            price_filter = Q()
+            if min_price is not None:
+                price_filter &= Q(course_user__price__gte=min_price)
+            if max_price is not None:
+                price_filter &= Q(course_user__price__lte=max_price)
+            if price_filter:
+                schools = schools.filter(price_filter)
+
+            # If location provided, filter schools with coordinates first
+            if learner_lat and learner_long:
+                try:
+                    learner_lat = float(learner_lat)
+                    learner_long = float(learner_long)
+                    
+                    # First filter schools that have coordinates
+                    schools = schools.exclude(lat__isnull=True).exclude(long__isnull=True)
+                    
+                    # Convert to float for comparison
+                    schools = schools.annotate(
+                        lat_float=Cast('lat', FloatField()),
+                        long_float=Cast('long', FloatField())
+                    )
+                    
+                    # Apply rough distance filter first (approximate 0.1 degree ≈ 11km)
+                    schools = schools.filter(
+                        lat_float__range=(learner_lat - 0.1, learner_lat + 0.1),
+                        long_float__range=(learner_long - 0.1, learner_long + 0.1)
+                    )
+                except (TypeError, ValueError):
+                    return Response(
+                        {'success': False, 'response': {'message': 'Invalid latitude or longitude.'}},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # Paginate results
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(schools, request)
+            
+            # Serialize results
+            serialized_schools = []
+            for school in page:
+                serializer = SearchSchoolSerializer(
+                    school.schoolprofile, 
+                    context={
+                        'request': request,
+                        'learner_location': (learner_lat, learner_long) if learner_lat and learner_long else None
+                    }
                 )
+                school_data = serializer.data
+                serialized_schools.append(school_data)
 
-            # Filter by price range (if applicable)
-            if min_price:
-                schools = schools.filter(course_user__price__gte=float(min_price))
-            if max_price:
-                schools = schools.filter(course_user__price__lte=float(max_price))
-
-            # If learner location is provided, filter schools within 5km radius
-            if learner_location:
-                nearby_schools = []
-                for school in schools:
-                    school_location = (float(school.lat), float(school.long))
-                    distance_in_km = geodesic(learner_location, school_location).km
-                    if distance_in_km <= 5:
-                        nearby_schools.append({
-                            'school': school,
-                            'distance': F"{round(distance_in_km, 2)} km"  
-                        })
-
-                # Serialize results for nearby schools
-                serialized_schools = []
-                for school_data in nearby_schools:
-                    school = school_data['school']
-                    distance = school_data['distance']
-                    serializer = SearchSchoolSerializer(school.schoolprofile, context={'request': request})
-                    school_data = serializer.data
-                    school_data['distance'] = distance  # Add distance to the serialized data
-                    serialized_schools.append(school_data)
-
-            else:
-                # If no learner location, show all schools
-                serialized_schools = []
-                for school in schools:
-                    serializer = SearchSchoolSerializer(school.schoolprofile, context={'request': request})
-                    serialized_schools.append(serializer.data)
-
-            return Response(
-                {'success': True,'response':{'data': serialized_schools}},
-                status=status.HTTP_200_OK
-            )
+            return paginator.get_paginated_response({
+                'success': True,
+                'response': {
+                    'data': serialized_schools
+                }
+            })
 
         except Exception as e:
             return Response(
-                {'success': False, 'message': str(e)},
+                {'success': False, 'response': {'message': str(e)}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 class SchoolDetail(APIView):

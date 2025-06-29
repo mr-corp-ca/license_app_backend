@@ -24,7 +24,8 @@ urlpatterns = [
     path('certificates/', CertificateCreateAPIView.as_view()),
     path('certificates/<int:id>/', CertificateCreateAPIView.as_view()),
 
-    path('AddVehicle',AddVehicleApiView.as_view(),name= 'add-vehicle'),
+    path('AddVehicle',AddVehicleApiView.as_view()),
+    path('Updatevehicles/<int:pk>/', AddVehicleApiView.as_view()),
 
     path('learner-list', LearnerListAPIView.as_view()),
     path('SchoolPackageDetail/<int:id>', SchoolPackageDetailAPIView.as_view()),

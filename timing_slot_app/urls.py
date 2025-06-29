@@ -7,6 +7,7 @@ urlpatterns = [
     path('LeanerSchedule',LearnerMonthlyScheduleView.as_view()),
     path('CheckAvailabiltyCar/', SpecialLessonRequestView.as_view()),
     path('MyBookedVehicle', MyBookedVehicleApiView.as_view()),
+    path('RequestSpecialLesson', RequestSpecialLessonApiView.as_view()),
 
 ]
     

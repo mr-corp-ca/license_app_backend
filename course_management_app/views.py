@@ -383,6 +383,55 @@ class AddVehicleApiView(APIView):
             return Response(
             {'status': False,'response':{'message': f"An error occurred.': {str(e)}"}}, 
             status=status.HTTP_400_BAD_REQUEST)
+        
+        
+    def patch(self, request, *args, **kwargs):
+        try:
+            vehicle_id = kwargs.get('pk')  # Get vehicle ID from URL
+            if not vehicle_id:
+                return Response(
+                    {"status": False, "response": {"message": "Vehicle ID is required."}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                vehicle = Vehicle.objects.get(id=vehicle_id, user=request.user)
+            except Vehicle.DoesNotExist:
+                return Response(
+                    {"status": False, "response": {"message": "Vehicle not found or you don't have permission."}},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Make data mutable if needed
+            try:
+                request.data._mutable = True
+            except:
+                pass
+
+            # Remove user from data if present (to prevent changing ownership)
+            if 'user' in request.data:
+                del request.data['user']
+
+            serializer = VehicleSerializer(vehicle, data=request.data, partial=True)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response(
+                    {"status": True, "response": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            
+            return Response(
+                {"status": False, "response": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        except Exception as e:
+            return Response(
+                {"status": False, "response": {"message": "An error occurred.", "details": str(e)}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class LearnerListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]
@@ -589,7 +638,6 @@ class ApplyDiscountAPIView(APIView):
         return Response({'status': True, 'response':{'data' : serialized_coupon}}, status=status.HTTP_200_OK)
 
   
-
 class SubscribeToPlanAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
