@@ -13,7 +13,8 @@ from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GETMonthlyScheduleSerializer, MonthlyScheduleSerializer
+from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer
+from django.db.models import Min
 
 class MonthlyScheduleAPIView(APIView):
     def post(self, request):
@@ -639,3 +640,15 @@ class SpecialLessonRequestView(APIView):
                 {'success': False, 'message': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class MyBookedVehicleApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        user_bookings = LearnerBookingSchedule.objects.filter(user=user).values('vehicle').annotate(min_date=Min('date')).values_list('id', flat=True)
+        distinct_bookings = LearnerBookingSchedule.objects.filter(id__in=user_bookings)
+
+        serializer = GETLearnerBookingScheduleSerializer(distinct_bookings, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)

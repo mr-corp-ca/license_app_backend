@@ -1,7 +1,7 @@
 from course_management_app.serializers import VehicleSerializer
 from rest_framework import serializers
 from timing_slot_app.constants import get_day_name
-from .models import MonthlySchedule
+from .models import LearnerBookingSchedule, MonthlySchedule
 
 class MonthlyScheduleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,5 +25,19 @@ class GETMonthlyScheduleSerializer(serializers.ModelSerializer):
         if instance.vehicle:
             return VehicleSerializer(instance.vehicle).data
         return None
+    
+class GETLearnerBookingScheduleSerializer(serializers.ModelSerializer):
+    vehicle = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LearnerBookingSchedule
+        fields = ['id', 'vehicle']
+
+    def get_vehicle(self, instance):
+        if instance.vehicle:
+            return VehicleSerializer(instance.vehicle).data
+        else:
+            return None
+    
     
     
