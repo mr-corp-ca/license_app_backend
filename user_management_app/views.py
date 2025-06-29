@@ -668,6 +668,7 @@ class SearchDrivingSchools(APIView):
             learner_long = request.query_params.get('learner_long')
 
             # Validate numeric parameters
+
             try:
                 min_price = float(min_price) if min_price else None
                 max_price = float(max_price) if max_price else None
@@ -737,8 +738,9 @@ class SearchDrivingSchools(APIView):
             # Serialize results
             serialized_schools = []
             for school in schools:
+                profile, created = SchoolProfile.objects.get_or_create(user=school)
                 serializer = SearchSchoolSerializer(
-                    school.schoolprofile, 
+                    profile, 
                     context={
                         'request': request,
                         'learner_location': (learner_lat, learner_long) if learner_lat and learner_long else None
