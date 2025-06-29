@@ -8,7 +8,6 @@ urlpatterns = [
     path('CheckAvailabiltyCar/', SpecialLessonRequestView.as_view()),
     path('MyBookedVehicle', MyBookedVehicleApiView.as_view()),
 
-
 ]
     
 
