@@ -793,7 +793,7 @@ class VehicleSelectionView(APIView):
     def get(self, request, id):
         try:
             # Fetch the school profile
-            school_profile = SchoolProfile.objects.filter(user__user_type='school', id=id).select_related('user').first()
+            school_profile = SchoolProfile.objects.filter(id=id).first()
             if not school_profile:
                 return Response({'success': False, 'response': {'message': 'School not found.'}}, status=status.HTTP_404_NOT_FOUND)
 
