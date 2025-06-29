@@ -181,11 +181,12 @@ class SchoolGETSingleCourseSerializer(serializers.ModelSerializer):
     institute_name = serializers.CharField(source='user.schoolprofile.institute_name', read_only=True)
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at','institute_name']
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at', 'institute_name', 'course_cover_image']
 
     def get_course_status(self, instance):
         learner_package = instance.learner_user.first()
         return learner_package.courese_status
+
 
  
 class LessonRatingSerializer(serializers.ModelSerializer):
