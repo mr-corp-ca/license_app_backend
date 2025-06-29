@@ -10,8 +10,8 @@ from user_management_app.models import *
 from timing_slot_app.models import *
 from course_management_app.models import *
 from rest_framework.permissions import IsAuthenticated
-from utils_app.models import City, Province, Radius, Location
-from utils_app.serializers import CitySerializer, ProvinceSerializer,CreateRadiusSerializer, RadiusSerializer,CoursePurchaseReceiptSerializer
+from utils_app.models import Banner, City, Province, Radius, Location
+from utils_app.serializers import BannerSerializer, CitySerializer, ProvinceSerializer,CreateRadiusSerializer, RadiusSerializer,CoursePurchaseReceiptSerializer
 
 # Create your views here.
 
@@ -183,3 +183,11 @@ class CoursePurchaseReceiptAPIView(APIView):
         except Exception as e:
             return Response({"success": False, "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class BannerApiView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        lessons = Banner.objects.all().order_by('-created_at')
+        serializer = BannerSerializer(lessons, many=True)
+        return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)

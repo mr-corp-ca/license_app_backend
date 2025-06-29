@@ -7,5 +7,6 @@ urlpatterns = [
 
     path('MyRadiusList', RadiusListCreateView.as_view(), name='radius-list'), 
     path('EditRadiusList/<int:id>/', RadiusListCreateView.as_view(), name='radius-edit'),
-    path('CourseReceipt/',CoursePurchaseReceiptAPIView.as_view())
+    path('CourseReceipt/',CoursePurchaseReceiptAPIView.as_view()),
+    path('BannerList/',BannerApiView.as_view())
 ]

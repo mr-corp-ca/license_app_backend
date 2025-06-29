@@ -135,3 +135,8 @@ class CoursePurchaseReceiptSerializer(serializers.ModelSerializer):
     def get_institute_image(self, obj):
         school = obj.package.user
         return school.logo.url if school and school.logo else None
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = '__all__'

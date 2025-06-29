@@ -74,3 +74,16 @@ class Location(BaseModelWithCreatedInfo):
     def __str__(self):
         return f"Locations - {self.location_name}"
     
+class Banner(BaseModelWithCreatedInfo):
+    BANNER_TYPE_CHOICES = [
+        ('website', 'Website'),
+        ('sms', 'SMS'),
+        ('whatsapp', 'WhatsApp'),
+    ]
+    
+    image = models.ImageField(upload_to='banners/', help_text="Banner image")
+    banner_type = models.CharField(max_length=20, choices=BANNER_TYPE_CHOICES, help_text="Type of banner - website, sms, or whatsapp")
+
+    class Meta:
+        verbose_name = "Banner"
+        verbose_name_plural = "Banners"    
