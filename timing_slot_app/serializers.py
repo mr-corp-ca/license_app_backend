@@ -16,7 +16,7 @@ class SpecialLessonSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     class Meta:
         model = SpecialLesson
-        fields = ['id', 'hire_car_status', 'hire_car_price_paid', 'hire_car_price', 'hire_car_date', 'hire_car_time']
+        fields = ['id', 'hire_car_status', 'hire_car_price_paid', 'hire_car_price', 'hire_car_date', 'hire_car_time', 'vehicle', 'user']
 
     def get_user(self, instance):
         return DefaultUserSerializer(instance.user).data

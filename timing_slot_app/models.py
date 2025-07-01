@@ -48,6 +48,7 @@ class LearnerBookingSchedule(BaseModelWithCreatedInfo):
     slot = models.TimeField(null=True,blank=True)
     is_completed = models.BooleanField(default=False)
     lesson_name =  models.TextField(blank=True, null=True, default='Lesson')
+    special_lesson = models.BooleanField(default=False)
     class Meta:
         unique_together = ('user', 'date')
     

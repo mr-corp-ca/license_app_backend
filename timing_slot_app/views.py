@@ -15,6 +15,8 @@ from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer
 from django.db.models import Min
+from django.shortcuts import get_object_or_404
+from django.db.models import Case, When, Value, IntegerField
 
 class MonthlyScheduleAPIView(APIView):
     def post(self, request):
@@ -608,6 +610,13 @@ class SpecialLessonRequestView(APIView):
                 {'success': False, 'response':{'message': 'Vehicle not found.'}},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+        existing_lesson = SpecialLesson.objects.filter(user=user, vehicle=vehicle, hire_car_status='Pending').first()
+        if existing_lesson:
+            return Response(
+                {'success': False, 'response':{'message': 'Please wait for approval. You have already applied to hire a car!'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Create or update special lesson
         try:
@@ -658,6 +667,54 @@ class RequestSpecialLessonApiView(APIView):
 
     def get(self, request):
         user = request.user
-        lessons = SpecialLesson.objects.filter(vehicle__user=user, hire_car_status='Pending')
+        # lessons = SpecialLesson.objects.filter(vehicle__user=user)
+        lessons = SpecialLesson.objects.filter(vehicle__user=user).annotate(
+        status_order=Case(
+            When(hire_car_status='Pending', then=Value(0)),
+            When(hire_car_status='Rejected', then=Value(1)),
+            When(hire_car_status='Accepted', then=Value(2)),
+            default=Value(3),  # for null or blank values
+            output_field=IntegerField(),
+        )
+    ).order_by('status_order')
+
         serializer = SpecialLessonSerializer(lessons, many=True)
         return Response({"success": True, "response": {"data": serializer.data}}, status=status.HTTP_200_OK)
+
+
+
+class UpdateSpecialLessonStatusApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, id):
+        user = request.user
+        request_type = request.data.get('request_type')
+        
+        if request_type not in ['Accepted', 'Rejected']:
+            return Response(
+                {"success": False, "response": {"message": "Invalid request type. Must be 'Accepted' or 'Rejected'."}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get the lesson and verify it belongs to the user
+        lesson = get_object_or_404(SpecialLesson, id=id, vehicle__user=user)
+        
+        # Update the status
+        lesson.hire_car_status = request_type
+        lesson.save()
+        if request_type == 'Accepted':
+            LearnerBookingSchedule.objects.update_or_create(
+                user=lesson.user,
+                vehicle=lesson.vehicle,
+                special_lesson=True,
+                defaults={
+                    'date': lesson.hire_car_date,
+                    'slot': lesson.hire_car_time
+                }
+            )
+        
+        serializer = SpecialLessonSerializer(lesson)
+        return Response(
+            {"success": True, "response": {"message": f"Request {request_type.lower()} successfully.", "data": serializer.data}},
+            status=status.HTTP_200_OK
+        )

@@ -11,7 +11,8 @@ LESSON_SELECT_CHOICE =(
 HIRE_CAR_STATUS= [ 
     ('Pending', 'Pending'),
     ('Rejected', 'Rejected'), 
-    ('Paid', 'Paid')
+    ('Accepted', 'Accepted'),
+
     ]
 
 ROAD_TEST_STATUS_CHOICES = [
