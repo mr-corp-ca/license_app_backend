@@ -149,9 +149,10 @@ class TransactionHistroy(BaseModelWithCreatedInfo):
 class UserNotification(BaseModelWithCreatedInfo):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     transactionhistory = models.ForeignKey(TransactionHistroy, null=True, blank=True, on_delete=models.SET_NULL)
-    status = models.CharField(max_length=255, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=255, choices=STATUS_CHOICES, null=True, blank=True)
     noti_type = models.CharField(max_length=255, choices=NOTIFICATION_TYPE_CHOICES) 
-    description = models.TextField() 
+    title = models.CharField(max_length=255, null=True, blank=True) 
+    text = models.TextField(null=True, blank=True) 
 
 
 class SchoolSetting(BaseModelWithCreatedInfo):

@@ -6,8 +6,9 @@ from decimal import Decimal
 from datetime import date
 from course_management_app.models import Vehicle
 from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd,convert_time
+from user_management_app.threads import send_push_notification
 from utils_app.models import Location,Radius
-from user_management_app.models import Wallet,TransactionHistroy
+from user_management_app.models import UserNotification, Wallet,TransactionHistroy
 from datetime import datetime, timedelta, time
 from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
@@ -468,7 +469,14 @@ class LearnerMonthlyScheduleView(APIView):
                         {'success': False, 'response': response.get('message')},
                         status=status.HTTP_400_BAD_REQUEST
                     )
+                
 
+            title = '📚 Lesson Booking Confirmed'
+            message = '✅ Your lesson has been successfully booked or updated. 🕒'
+
+            notification_type = 'general'
+            send_push_notification(user, title, message, notification_type)
+            UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
             return Response({'success': True, 'response': response_list[0]}, status=status.HTTP_201_CREATED)
 
         except Exception as e:
@@ -631,6 +639,15 @@ class SpecialLessonRequestView(APIView):
                     'hire_car_status': 'Pending'
                 }
             )
+        
+
+            title = '📤 Hire a Car  Request Submitted 🚗'
+            message = '⏳ Your hire a car request has been submitted to the instructor. Awaiting approval. 🚗'
+
+            notification_type = 'general'
+            send_push_notification(user, title, message, notification_type)
+            UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
             
             return Response(
                 {
@@ -699,10 +716,16 @@ class UpdateSpecialLessonStatusApiView(APIView):
         # Get the lesson and verify it belongs to the user
         lesson = get_object_or_404(SpecialLesson, id=id, vehicle__user=user)
         
+        title = '🛑 Hire a Car Request Rejected'
+        message = '❌ The instructor has rejected your hire a car request. ℹ️ For more details, please contact 🛠️ Help & Support.'
+
         # Update the status
         lesson.hire_car_status = request_type
         lesson.save()
         if request_type == 'Accepted':
+            title = '🚗 Hire a Car Request Accepted'
+            message = '✅ The instructor has accepted your hire a car request. 🚗 Get ready to go!'
+
             LearnerBookingSchedule.objects.update_or_create(
                 user=lesson.user,
                 vehicle=lesson.vehicle,
@@ -713,6 +736,12 @@ class UpdateSpecialLessonStatusApiView(APIView):
                 }
             )
         
+
+        notification_type = 'general'
+        send_push_notification(user, title, message, notification_type)
+        UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
+
         serializer = SpecialLessonSerializer(lesson)
         return Response(
             {"success": True, "response": {"message": f"Request {request_type.lower()} successfully.", "data": serializer.data}},

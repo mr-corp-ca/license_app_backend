@@ -33,6 +33,8 @@ import json
 from django.db.models import Q, FloatField
 from django.db.models.functions import Cast
 from geopy.distance import geodesic
+from fcm_django.models import FCMDevice
+
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
 from django.conf import settings
@@ -266,6 +268,8 @@ class VerifyOTPView(APIView):
         phone_number = request.data.get('phone_number')
         user_type = request.data.get('user_type')
         code = request.data.get('code')
+        user_d_id = request.data.get('device_id' , None)
+
         user = User.objects.filter(phone_number=phone_number).first()
         # otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
 
@@ -285,7 +289,11 @@ class VerifyOTPView(APIView):
         user.save()
         # otp_code.is_varified = True
         # otp_code.save()
-
+        if user_d_id:
+            fcm_device, created = FCMDevice.objects.get_or_create(
+                registration_id=user_d_id,
+                defaults={'user': user, 'device_id': user_d_id}
+            )
         try:
             token = Token.objects.get(user=user)
         except Token.DoesNotExist:
@@ -492,8 +500,9 @@ class ConfirmDepositView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        user = request.user
+
         try:
-            user = request.user
             payment_intent_id = request.data.get('payment_intent_idamount')
 
             payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
@@ -512,10 +521,32 @@ class ConfirmDepositView(APIView):
                 )
                 transaction.save()
 
+
+                title = '💸 Payment Deposited Successfully'
+                message = '✅ Your payment has been added to your wallet. Check your wallet balance now!'
+
+                notification_type = 'general'
+                send_push_notification(user, title, message, notification_type)
+                UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title, transactionhistory=transaction, status='accepted')
+
+
                 return Response({"success": True, "message": "Deposit successful!", "balance": wallet.balance}, status=status.HTTP_200_OK)
             else:
+                title = '⚠️ Payment Failed'
+                message = '❌ We couldn\'t deposit the payment into your wallet. Please try again or contact support.'
+                notification_type = 'general'
+                send_push_notification(user, title, message, notification_type)
+                UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
                 return Response({"success": False, "message": "Payment not confirmed!"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+                
+            title = '⚠️ Payment Failed'
+            message = '❌ We couldn\'t deposit the payment into your wallet. Please try again or contact support.'
+            notification_type = 'general'
+            send_push_notification(user, title, message, notification_type)
+            UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -927,8 +958,8 @@ class PaymentDetailView(APIView):
 
 class PaymentRequestView(APIView):
     def post(self, request):
+        user = request.user
         try:
-            user = request.user
             data = request.data
             package_id = data.get('package_id')
             payment_method = data.get('payment_method')
@@ -981,18 +1012,44 @@ class PaymentRequestView(APIView):
                             'total_price': total_price,
                             'message': 'Stripe payment processed successfully.'
                         }
+
+                        title = '💳 Stripe Payment Successful'
+                        message = '✅ Your payment has been processed successfully via Stripe.'
+
+                        notification_type = 'general'
+                        send_push_notification(user, title, message, notification_type)
+                        UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title, transactionhistory=transaction, status='accepted')
+
                         return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
                     else:
                         transaction.transaction_status = 'rejected'
                         transaction.save()
+                        title = '❌ Stripe Payment Failed'
+                        message = '⚠️ Your payment could not be processed via Stripe. Please try again or contact support.'
+                        notification_type = 'general'
+                        send_push_notification(user, title, message, notification_type)
+                        UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
                         return Response({'success': False, 'response': {'message': 'Stripe payment failed.'}}, status=status.HTTP_400_BAD_REQUEST)
                 except stripe.error.CardError as e:
                     transaction.transaction_status = 'rejected'
                     transaction.save()
+                    title = '❌ Stripe Payment Failed'
+                    message = '⚠️ Your payment could not be processed via Stripe. Please try again or contact support.'
+                    notification_type = 'general'
+                    send_push_notification(user, title, message, notification_type)
+                    UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+                
                     return Response({"success": False, 'response': {'message': 'Card declined.'}}, status=status.HTTP_400_BAD_REQUEST)
                 except stripe.error.StripeError as e:
                     transaction.transaction_status = 'rejected'
                     transaction.save()
+                    title = '❌ Stripe Payment Failed'
+                    message = '⚠️ Your payment could not be processed via Stripe. Please try again or contact support.'
+                    notification_type = 'general'
+                    send_push_notification(user, title, message, notification_type)
+                    UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
                     return Response({"success": False, 'response': {'message': 'Stripe error: ' + str(e)}}, status=status.HTTP_400_BAD_REQUEST)
 
             elif payment_method == 'direct_cash':
@@ -1009,9 +1066,20 @@ class PaymentRequestView(APIView):
                     'total_price': total_price,
                     'message': 'Direct cash payment request created successfully. Please wait for approval.'
                 }
+                title = '💰 Cash Payment Request Created'
+                message = '🕒 Your direct cash payment request has been submitted. Please wait for admin approval.'
+                notification_type = 'general'
+                send_push_notification(user, title, message, notification_type)
+
                 return Response({'success': True, 'response': {'data': response_data}}, status=status.HTTP_200_OK)
 
         except Exception as e:
+            title = '❌ Stripe Payment Failed'
+            message = '⚠️ Your payment could not be processed via Stripe. Please try again or contact support.'
+            notification_type = 'general'
+            send_push_notification(user, title, message, notification_type)
+            UserNotification.objects.create(user=user, noti_type=notification_type, text=message, title=title)
+
             return Response({
                 'success': False,
                 'response': {'message': 'An error occurred while processing the payment.'},
