@@ -148,7 +148,7 @@ REST_FRAMEWORK = {
   }
 
 
-cred = credentials.Certificate("cred/gearup-f9aa6-firebase-adminsdk-tfvhx-345813eaed.json")
+cred = credentials.Certificate("cred/drivinglicese-761f3-firebase-adminsdk-fbsvc-c1ae85dd05.json")
 firebase_admin.initialize_app(cred)
 
 DEFAULT_FILE_STORAGE = 'driving_license.custom_storage.CustomFileSystemStorage'
