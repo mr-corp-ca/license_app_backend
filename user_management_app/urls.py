@@ -29,5 +29,7 @@ urlpatterns = [
     path('CancleReport/',LearnerReportAPIVIEW.as_view()),
     path('Referrals/',ReferralAPIView.as_view()),
     path('Wallet/',WalletAPIView.as_view()),
+    path('SchoolList', SchoolListAPIView.as_view()),
+    path('SchoolStatic', SchoolStaticAPIView.as_view()),
     # path('WalletHistory/',WalletHistoryAPIView.as_view()),
 ]

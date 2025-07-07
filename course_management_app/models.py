@@ -32,7 +32,8 @@ class Course(BaseModelWithCreatedInfo):
     refund_policy = models.TextField(blank=True, null=True)
     course_cover_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
     service = models.ManyToManyField(Service, related_name='course_service', default=None)
-    
+    hire_car_price = models.FloatField(default=0.0, verbose_name='Hire car price', blank=True, null=True)
+
     def __str__(self):
         return self.user.username
 

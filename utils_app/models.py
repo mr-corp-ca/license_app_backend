@@ -1,5 +1,6 @@
 from django.db import models
 from utils_app.requestMW import get_request
+from decimal import Decimal
 from django.conf import settings
 from django_extensions.db.fields import CreationDateTimeField, ModificationDateTimeField
 # Create your models here.
@@ -60,6 +61,7 @@ class Radius(BaseModelWithCreatedInfo):
     main_location_name = models.CharField(max_length=255,null=True, blank=True,verbose_name='Main Radius')
     main_latitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)  
     main_longitude = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True)
+    current_location_price = models.DecimalField(max_digits=9, decimal_places=6,null=True, blank=True,  default=Decimal('0.0'))
 
     def __str__(self):
         return f"Radius for School {self.user.id}"

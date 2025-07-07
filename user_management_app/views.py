@@ -1304,3 +1304,56 @@ class WithdrawalRequestAPIView(APIView):
 
         except Exception as e:
             return Response({"success": False, "response" : {"message": str(e)}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SchoolListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        search = request.GET.get('search')
+
+        users= User.objects.filter(user_status='accepted', user_type='school')
+        if search:
+            userst = users.filter(
+                Q(full_name__icontains=search) |
+                Q(address__icontains=search) |
+                Q(province__name__icontains=search) |
+                Q(city__name__icontains=search)
+            )
+
+        users_list = users.values_list('id', flat=True)
+
+        schools = SchoolProfile.objects.filter(user__in=users_list).distinct()
+        if search:
+            schools = schools.filter(
+
+                Q(license_category__name__icontains=search) | 
+                Q(services__name__icontains=search) |
+                Q(institute_name__icontains=search) |
+                Q(instructor_name__icontains=search) 
+
+            ).distinct()
+
+        serializer = SearchSchoolSerializer(schools, many=True)
+        return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_200_OK)
+
+
+class SchoolStaticAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        total_schools = User.objects.filter(user_status='accepted', user_type='school').count()
+        total_learners = User.objects.filter(user_type='learner').count()
+        total_vehicles = Vehicle.objects.all().count()
+        lessons = LearnerBookingSchedule.objects.all().values_list('user_id', flat=True)
+        total_lessons = User.objects.filter(id__in=lessons)
+
+        data_dict = {
+            'total_schools': total_schools,
+            'total_learners': total_learners,
+            'total_vehicles': total_vehicles,
+            'total_lessons': total_lessons,
+        }
+        return Response({'success': True, 'response': {'data': data_dict}}, status=status.HTTP_200_OK)
+

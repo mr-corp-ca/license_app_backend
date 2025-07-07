@@ -25,14 +25,14 @@ class RadiusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Radius
-        fields = ['id', 'main_location_name', 'main_latitude', 'main_longitude', 'locations']
+        fields = ['id', 'main_location_name', 'main_latitude', 'main_longitude', 'locations', 'current_location_price']
 
 
 class CreateRadiusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Radius
-        fields = ['id','user', 'main_location_name', 'main_latitude', 'main_longitude']
+        fields = ['id','user', 'main_location_name', 'main_latitude', 'main_longitude', 'current_location_price']
 
 class CoursePurchaseReceiptSerializer(serializers.ModelSerializer):
     institute_name = serializers.SerializerMethodField()

@@ -181,7 +181,7 @@ class SchoolGETSingleCourseSerializer(serializers.ModelSerializer):
     institute_name = serializers.CharField(source='user.schoolprofile.institute_name', read_only=True)
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at', 'institute_name', 'course_cover_image']
+        fields = ['id', 'user', 'description', 'price', 'refund_policy', 'lesson_numbers', 'created_at', 'updated_at', 'institute_name', 'course_cover_image', 'hire_car_price']
 
     def get_course_status(self, instance):
         learner_package = instance.learner_user.first()
@@ -273,7 +273,7 @@ class GETSingleCourseSerializer(serializers.ModelSerializer):
     course_cover_image = serializers.SerializerMethodField()
     class Meta:
         model = Course
-        fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image']
+        fields = ['id', 'user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image', 'hire_car_price']
 
     def get_course_cover_image(self, instance):
         if instance.course_cover_image:
@@ -285,7 +285,7 @@ class GETSingleCourseSerializer(serializers.ModelSerializer):
 class SingleCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image']
+        fields = ['user', 'description', 'price', 'road_test_price', 'refund_policy', 'lesson_numbers', 'lesson', 'course_cover_image', 'hire_car_price']
 
 
 class SchoolPackageDetailSerializer(serializers.ModelSerializer):
