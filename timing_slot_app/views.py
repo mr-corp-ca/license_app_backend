@@ -348,6 +348,162 @@ class MonthlyScheduleAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
+class AvailableBreakTimesAPIView(APIView):
+    
+    def get(self, request):
+        # Get query parameters
+        date = request.query_params.get('date')
+        start_time = request.query_params.get('start_time')
+        end_time = request.query_params.get('end_time')
+        lesson_duration = request.query_params.get('lesson_duration')
+        lesson_gap = request.query_params.get('lesson_gap', 0)
+        
+        # Validate required parameters
+        if not all([date, start_time, end_time, lesson_duration]):
+            return Response(
+                {'success': False, 'message': 'date, start_time, end_time, and lesson_duration are required parameters'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Parse the input data
+            parsed_date = datetime.strptime(date, '%Y-%m-%d').date()
+            parsed_start_time = datetime.strptime(start_time, '%H:%M').time()
+            parsed_end_time = datetime.strptime(end_time, '%H:%M').time()
+            lesson_duration = float(lesson_duration)
+            lesson_gap = int(lesson_gap)
+            
+            # Create a mock item similar to what we have in the POST request
+            item = {
+                'date': parsed_date,
+                'start_time': parsed_start_time,
+                'end_time': parsed_end_time,
+                'lesson_duration': lesson_duration,
+                'lesson_gap': lesson_gap,
+            }
+            
+            # Calculate lesson slots
+            lesson_slots = self.calculate_lesson_slots(item)
+            
+            # Get all valid break start times (lesson end times)
+            valid_break_times = [slot['end'] for slot in lesson_slots if slot['type'] == 'lesson']
+            
+            # If no lessons, the whole schedule is available
+            if not valid_break_times:
+                available_slots = [{
+                    'start': item['start_time'].strftime('%H:%M'),
+                    'end': item['end_time'].strftime('%H:%M'),
+                    'duration': (datetime.combine(datetime.today(), item['end_time']) - 
+                                datetime.combine(datetime.today(), item['start_time'])).seconds / 3600
+                }]
+            else:
+                available_slots = []
+                
+                # Check time before first lesson
+                first_lesson_start = lesson_slots[0]['start']
+                if item['start_time'] < first_lesson_start:
+                    available_slots.append({
+                        'start': item['start_time'].strftime('%H:%M'),
+                        'end': first_lesson_start.strftime('%H:%M'),
+                        'duration': (datetime.combine(datetime.today(), first_lesson_start) - 
+                                    datetime.combine(datetime.today(), item['start_time'])).seconds / 3600
+                    })
+                
+                # Check times between lessons
+                for i in range(len(lesson_slots)-1):
+                    current_end = lesson_slots[i]['end']
+                    next_start = lesson_slots[i+1]['start']
+                    if current_end < next_start:
+                        available_slots.append({
+                            'start': current_end.strftime('%H:%M'),
+                            'end': next_start.strftime('%H:%M'),
+                            'duration': (datetime.combine(datetime.today(), next_start) - 
+                                        datetime.combine(datetime.today(), current_end)).seconds / 3600
+                        })
+                
+                # Check time after last lesson
+                last_lesson_end = lesson_slots[-1]['end']
+                if last_lesson_end < item['end_time']:
+                    available_slots.append({
+                        'start': last_lesson_end.strftime('%H:%M'),
+                        'end': item['end_time'].strftime('%H:%M'),
+                        'duration': (datetime.combine(datetime.today(), item['end_time']) - 
+                                    datetime.combine(datetime.today(), last_lesson_end)).seconds / 3600
+                    })
+            
+            return Response({
+                'success': True,
+                'date': date,
+                'available_break_times': available_slots,
+                # 'lesson_slots': [{
+                #     'start': slot['start'].strftime('%H:%M'),
+                #     'end': slot['end'].strftime('%H:%M'),
+                #     'type': slot['type']
+                # } for slot in lesson_slots]
+            })
+            
+        except ValueError as e:
+            return Response(
+                {'success': False, 'message': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    def calculate_lesson_slots(self, item):
+        """Calculate all possible lesson slots (same as in MonthlyScheduleAPIView)"""
+        lesson_slots = []
+        if not item.get('lesson_duration'):
+            return lesson_slots
+
+        lesson_duration = item['lesson_duration']
+        lesson_gap = item.get('lesson_gap', 0)
+        current_time = item['start_time']
+        end_time = item['end_time']
+
+        while True:
+            lesson_end = (datetime.combine(datetime.today(), current_time) + 
+                        timedelta(hours=lesson_duration)).time()
+            
+            if lesson_end > end_time:
+                break
+            
+            # Add the lesson slot
+            lesson_slots.append({
+                'type': 'lesson',
+                'start': current_time,
+                'end': lesson_end,
+                'formatted': f"{current_time.strftime('%H:%M')}-{lesson_end.strftime('%H:%M')}"
+            })
+            
+            # Only add gap between lessons, not after breaks
+            if lesson_gap > 0 and lesson_end < end_time:
+                # Check if there's time for another lesson after the gap
+                potential_next_lesson_start = (datetime.combine(datetime.today(), lesson_end) + 
+                                            timedelta(minutes=lesson_gap)).time()
+                
+                potential_next_lesson_end = (datetime.combine(datetime.today(), potential_next_lesson_start) + 
+                                        timedelta(hours=lesson_duration)).time()
+                
+                # Only add gap if there's room for another full lesson after it
+                if potential_next_lesson_end <= end_time:
+                    gap_end = potential_next_lesson_start
+                    lesson_slots.append({
+                        'type': 'gap',
+                        'start': lesson_end,
+                        'end': gap_end,
+                        'formatted': f"{lesson_end.strftime('%H:%M')}-{gap_end.strftime('%H:%M')} (gap)"
+                    })
+                    current_time = gap_end
+                else:
+                    break
+            else:
+                current_time = lesson_end
+            
+            if current_time >= end_time:
+                break
+        
+        return lesson_slots
+
 class LearnerMonthlyScheduleView(APIView):
     permission_classes = [IsAuthenticated]
 
