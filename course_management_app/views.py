@@ -110,19 +110,37 @@ class CourseApiView(APIView):
 
     def patch(self, request, id):
         user = request.user
-        course = Course.objects.filter(id=id, user=user).first()
+        request_data = request.data
+        course = Course.objects.filter(id=id).first()
         if not course:
             return Response(
                 {"success": False, "response": {"message": "Course not found!"}},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        lessons = request.data.get('lessons', None)
+        lessons = request_data.get('lessons')
+        try:
+            if type(lessons) == str:
+                lessons = json.loads(lessons) 
+        except:
+            pass
+
+        # if len(lessons) != lesson_numbers:
+        #     return Response(
+        #         {
+        #             "success": False,
+        #             "response": {
+        #                 "message": "The total number of lessons should match the value provided in lesson_numbers."
+        #             }
+        #         },
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
+        
         serializer = SingleCourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
             course = serializer.save()
 
-            if lessons is not None:
+            if lessons:
                 course.lesson.set(lessons)
 
             return Response(
