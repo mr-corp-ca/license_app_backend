@@ -1347,7 +1347,7 @@ class SchoolStaticAPIView(APIView):
         total_learners = User.objects.filter(user_type='learner').count()
         total_vehicles = Vehicle.objects.all().count()
         lessons = LearnerBookingSchedule.objects.all().values_list('user_id', flat=True)
-        total_lessons = User.objects.filter(id__in=lessons)
+        total_lessons = User.objects.filter(id__in=lessons).count()
 
         data_dict = {
             'total_schools': total_schools,
