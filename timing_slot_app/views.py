@@ -8,16 +8,18 @@ from course_management_app.models import Vehicle
 from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd,convert_time
 from user_management_app.threads import send_push_notification
 from utils_app.models import Location,Radius
-from user_management_app.models import UserNotification, Wallet,TransactionHistroy
+from user_management_app.models import User, UserNotification, Wallet,TransactionHistroy
 from datetime import datetime, timedelta, time
 from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer
+from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer, UserLessonSerializer
 from django.db.models import Min
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Count, Q, Min, F, ExpressionWrapper, FloatField
+from django.db.models.functions import Cast
 
 class MonthlyScheduleAPIView(APIView):
     def post(self, request):
@@ -903,3 +905,63 @@ class UpdateSpecialLessonStatusApiView(APIView):
             {"success": True, "response": {"message": f"Request {request_type.lower()} successfully.", "data": serializer.data}},
             status=status.HTTP_200_OK
         )
+    
+
+
+class LessonDataApiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        today = date.today()
+        user = request.user
+        
+        if user.user_type not in ['school', 'learner']:
+            return Response(
+        {
+            'success': False,
+            'response': {
+                'message': 'You do not have permission to access this data.'
+            }
+        },
+        status=status.HTTP_403_FORBIDDEN
+    )
+
+        if user.user_type == 'school':
+            users = User.objects.filter(learnerweekly_user__vehicle__user=user)
+        elif user.user_type == 'learner':
+            users = User.objects.filter(learnerweekly_user__user=user)
+            
+        users = users.annotate(
+            total_lessons=Count('learnerweekly_user'),
+            completed_lessons=Count(
+                'learnerweekly_user',
+                filter=Q(learnerweekly_user__date__lt=today)
+            ),
+            ongoing_lessons=Count(
+                'learnerweekly_user',
+                filter=Q(learnerweekly_user__date__gte=today)
+            ),
+            earliest_lesson_date=Min('learnerweekly_user__date'),
+            completion_percentage=ExpressionWrapper(
+                Cast(F('completed_lessons'), FloatField()) / 
+                Cast(F('total_lessons'), FloatField()) * 100,
+                output_field=FloatField()
+            )
+        ).distinct()
+
+        # Categorize users
+        ongoing_users = []
+        completed_users = []
+        
+        for user_obj in users:
+            data = UserLessonSerializer(user_obj).data
+            if user_obj.ongoing_lessons > 0:
+                ongoing_users.append(data)
+            elif user_obj.completed_lessons > 0:
+                completed_users.append(data)
+        
+        return Response({
+            'ongoing_lessons_users': ongoing_users,
+            'completed_lessons_users': completed_users
+        })
+    

@@ -10,6 +10,7 @@ urlpatterns = [
     path('RequestSpecialLesson', RequestSpecialLessonApiView.as_view()),
     path('special_lessons/<int:id>/update-status/', UpdateSpecialLessonStatusApiView.as_view()),
     path('AvailableBreakTimes', AvailableBreakTimesAPIView.as_view()),
+    path('LessonData/', LessonDataApiView.as_view()),
 ]
     
 

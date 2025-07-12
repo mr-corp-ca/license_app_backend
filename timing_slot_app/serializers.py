@@ -1,6 +1,7 @@
 from course_management_app.serializers import VehicleSerializer
 from rest_framework import serializers
 from timing_slot_app.constants import get_day_name
+from user_management_app.models import User
 from user_management_app.serializers import DefaultUserSerializer
 from utils_app.models import Location
 from utils_app.serializers import LocationSerializer
@@ -61,3 +62,28 @@ class GETLearnerBookingScheduleSerializer(serializers.ModelSerializer):
             return None
     
     
+class UserLessonSerializer(serializers.ModelSerializer):
+    total_lesson = serializers.SerializerMethodField()
+    attend_lesson = serializers.SerializerMethodField()
+    start_date = serializers.SerializerMethodField()
+    attend_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson']
+    
+    def get_attend_percentage(self, instance):
+        if instance.total_lessons > 0:
+            return round((instance.completed_lessons / instance.total_lessons) * 100, 2)
+        return 0.0
+    
+    def get_total_lesson(self, instance):
+        return getattr(instance, 'total_lessons', 0)
+
+    def get_attend_lesson(self, instance):
+        completed = getattr(instance, 'completed_lessons', 0)
+        total = getattr(instance, 'total_lessons', 0)
+        return f'{completed}/{total}'
+
+    def get_start_date(self, instance):
+        return getattr(instance, 'earliest_lesson_date', None)
