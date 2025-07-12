@@ -4,6 +4,7 @@ from django.utils.timezone import localtime
 from driving_license import settings
 from user_management_app.models import *
 from timing_slot_app.models import *
+from django.utils.timezone import now
 
 class DiscountOfferUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -349,9 +350,15 @@ class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
     
 
 class SubscriptionPackagePlanSerializer(serializers.ModelSerializer):
+    is_packge = serializers.SerializerMethodField()
     class Meta:
         model = SubscriptionPackagePlan
-        fields = ['id', 'price', 'package_plan']
+        fields = ['id', 'price', 'package_plan',  'is_packge']
+
+    def get_is_packge(self, instance):
+        user = self.context.get('user')
+        subscription = SelectedSubscriptionPackagePaln.objects.filter(user=user).order_by('-created_at').first()
+        return bool(subscription and subscription.expired > now())        
 
 class SelectedSubscriptionPackagePlanSerializer(serializers.ModelSerializer):
     package_plan = SubscriptionPackagePlanSerializer(read_only=True)

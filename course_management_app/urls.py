@@ -31,7 +31,7 @@ urlpatterns = [
     path('SchoolPackageDetail/<int:id>', SchoolPackageDetailAPIView.as_view()),
     path('CoursesList', CoursesListAPIView.as_view()),
     path('InstructorLessons/',InstructorLessonsAPIView.as_view()),
-    path('SubscriptionPacakgesList/',SubscriptionPackageListAPIView.as_view()),
+    path('SubscriptionPacakgesList/', SubscriptionPackageListAPIView.as_view()),
     path('ApplyCode/',ApplyDiscountAPIView.as_view()),
     path('SubscribedPackage/',SubscribeToPlanAPIView.as_view())
 ]

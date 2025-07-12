@@ -621,7 +621,7 @@ class SubscriptionPackageListAPIView(APIView):
     
     def get(self, request):
         packages = SubscriptionPackagePlan.objects.all()
-        serializer = SubscriptionPackagePlanSerializer(packages, many=True)
+        serializer = SubscriptionPackagePlanSerializer(packages, many=True, context ={'user': request.user})
         return Response({'status': True, 'response' : {'data': serializer.data}}, status=status.HTTP_200_OK)
 
 

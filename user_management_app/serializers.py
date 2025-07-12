@@ -1,3 +1,4 @@
+from course_management_app.serializers import SelectedSubscriptionPackagePlanSerializer
 from rest_framework import serializers
 from django.db.models import Avg, Sum
 from course_management_app.models import Course, Vehicle, Package, Service, Lesson, LearnerSelectedPackage, LearnerSelectedPackage, SchoolRating, LicenseCategory, SelectedSubscriptionPackagePaln
@@ -75,10 +76,11 @@ class SchoolUserSerializer(serializers.ModelSerializer):
     province = serializers.SerializerMethodField()
     school_profile = serializers.SerializerMethodField()
     has_active_subscription = serializers.SerializerMethodField()
+    latest_subscription = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = ['id', 'email', 'username', 'user_type', 'dob', 'license_number', 'full_name', 'logo',
-                  'phone_number', 'province', 'city', 'school_profile', 'has_active_subscription']
+                  'phone_number', 'province', 'city', 'school_profile', 'has_active_subscription', 'latest_subscription']
 
     def get_city(self, instance):
         if instance.city:
@@ -102,6 +104,14 @@ class SchoolUserSerializer(serializers.ModelSerializer):
     def get_has_active_subscription(self, instance):
         subscription = SelectedSubscriptionPackagePaln.objects.filter(user=instance).order_by('-created_at').first()
         return bool(subscription and subscription.expired > now())
+    
+    def get_latest_subscription(self, instance):
+        subscription = SelectedSubscriptionPackagePaln.objects.filter(user=instance).order_by('-created_at').first()
+        if subscription:
+            return SelectedSubscriptionPackagePlanSerializer(subscription).data
+        else:
+            return None
+
         
 class DriverProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -336,7 +346,8 @@ class LearnerBookingScheduleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model =  LearnerBookingSchedule
-        fields = ['id','road_test','road_test_date','road_test_time','special_lesson','hire_car','hire_car_date','hire_car_time']
+        fields = ['id', 'road_test', 'road_test_date', 'road_test_time', 'special_lesson', 'hire_car', 'hire_car_date', 
+                  'hire_car_time', 'date']
 
 class LearnerDetailSerializer(serializers.ModelSerializer):
     package = serializers.SerializerMethodField()
@@ -344,7 +355,7 @@ class LearnerDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','user_type','full_name', 'email', 'dob', 'license_number', 'address', 'phone_number', 'package', 'booking_schedule']
+        fields = ['id','user_type','full_name', 'email', 'dob', 'license_number', 'address', 'phone_number', 'package', 'booking_schedule', 'logo']
 
     def get_package(self, obj):
         user = self.context.get('user')

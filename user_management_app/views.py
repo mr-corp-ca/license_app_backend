@@ -924,7 +924,17 @@ class LearnerDetailApiview(APIView):
                 'response':{'message': 'An error occurred while processing the request.'},
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
+class SchoolLearnerListApiview(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request,id):
+        user = request.user
+
+        learner = User.objects.filter(id=id).first()
+        school_setting, created = SchoolSetting.objects.get_or_create(user=user)
+        learner = school_setting.learner.all()
+        serializer = LearnerDetailSerializer(learner, context={'user': user})
+        return Response({'success': True, 'response':{'data': serializer.data}}, status=status.HTTP_200_OK)
 
 class SchoolRatingListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]

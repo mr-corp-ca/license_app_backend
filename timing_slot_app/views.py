@@ -8,7 +8,7 @@ from course_management_app.models import Vehicle
 from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd,convert_time
 from user_management_app.threads import send_push_notification
 from utils_app.models import Location,Radius
-from user_management_app.models import User, UserNotification, Wallet,TransactionHistroy
+from user_management_app.models import SchoolSetting, User, UserNotification, Wallet,TransactionHistroy
 from datetime import datetime, timedelta, time
 from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
@@ -555,7 +555,8 @@ class LearnerMonthlyScheduleView(APIView):
                 for schedule in monthly_schedules:
                     available_slots.append({'slot':get_schedule_times(schedule), 'date':schedule.date, 'day_name':get_day_name(schedule.date)})
 
-
+                school_setting, created = SchoolSetting.objects.get_or_create(user=vehicle.user)
+                school_setting.learner.add(user)
                 return Response({
                     'success': True,
                     'available_slots': available_slots,
