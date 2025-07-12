@@ -18,7 +18,7 @@ from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlySchedule
 from django.db.models import Min
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField
-from django.db.models import Count, Q, Min, F, ExpressionWrapper, FloatField
+from django.db.models import Count, Q, Min, F, ExpressionWrapper, FloatField, Max
 from django.db.models.functions import Cast
 
 class MonthlyScheduleAPIView(APIView):
