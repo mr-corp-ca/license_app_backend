@@ -1268,18 +1268,10 @@ class TransactionListAPIView(APIView):
 
     def get(self, request):
         user = request.user
+        transactions = TransactionHistroy.objects.filter(wallet__user=user).order_by('-created_at')
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
 
-        if user.user_type != 'school':
-            return Response({'success': False, 'response': {'message': 'Only schools can view transactions'}}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            transactions = TransactionHistroy.objects.filter(wallet__user__user_type="learner", school=user).order_by('-created_at')
-
-            serializer = TransactionSerializer(transactions, many=True)
-            return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
-
-        except TransactionHistroy.DoesNotExist:
-            return Response({'success': False, 'response': {'message': 'No transaction found'}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class WithdrawalRequestAPIView(APIView):

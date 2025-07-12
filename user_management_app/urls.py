@@ -21,6 +21,7 @@ urlpatterns = [
     path('schools/<int:id>/vehicles/', VehicleSelectionView.as_view(), name='vehicle-selection'),
     path('NewLearnerDetail/<int:id>/',LearnerDetailApiview.as_view()),
     path('SchoolLearnerList',SchoolLearnerListApiview.as_view()),
+    path('TransactionList',TransactionListAPIView.as_view()),
     
     path('SchoolRatingList/',SchoolRatingListAPIView.as_view()),
     path('PaymentDetail/<int:id>/',PaymentDetailView.as_view()),
