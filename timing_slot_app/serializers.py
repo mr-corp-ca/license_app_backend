@@ -70,7 +70,7 @@ class UserLessonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson']
+        fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson', 'attend_percentage']
     
     def get_attend_percentage(self, instance):
         if instance.total_lessons > 0:
