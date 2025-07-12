@@ -917,21 +917,28 @@ class LessonDataApiView(APIView):
         
         if user.user_type not in ['school', 'learner']:
             return Response(
-        {
-            'success': False,
-            'response': {
-                'message': 'You do not have permission to access this data.'
-            }
-        },
-        status=status.HTTP_403_FORBIDDEN
-    )
+                {
+                    'success': False,
+                    'response': {
+                        'message': 'You do not have permission to access this data.'
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
 
+        # Get the base queryset based on user type
         if user.user_type == 'school':
-            users = User.objects.filter(learnerweekly_user__vehicle__user=user)
+            # For school, get all learners associated with their vehicles
+            learners = User.objects.filter(
+                learnerweekly_user__vehicle__user=user,
+                user_type='learner'
+            ).distinct()
         elif user.user_type == 'learner':
-            users = User.objects.filter(learnerweekly_user__user=user)
+            # For learner, just get themselves
+            learners = User.objects.filter(id=user.id)
             
-        users = users.annotate(
+        # Annotate the learner data with lesson statistics
+        learners = learners.annotate(
             total_lessons=Count('learnerweekly_user'),
             completed_lessons=Count(
                 'learnerweekly_user',
@@ -942,26 +949,61 @@ class LessonDataApiView(APIView):
                 filter=Q(learnerweekly_user__date__gte=today)
             ),
             earliest_lesson_date=Min('learnerweekly_user__date'),
-            completion_percentage=ExpressionWrapper(
-                Cast(F('completed_lessons'), FloatField()) / 
-                Cast(F('total_lessons'), FloatField()) * 100,
+            latest_lesson_date=Max('learnerweekly_user__date'),
+            completion_percentage=Case(
+                When(total_lessons=0, then=0.0),
+                default=ExpressionWrapper(
+                    Cast(F('completed_lessons'), FloatField()) / 
+                    Cast(F('total_lessons'), FloatField()) * 100,
+                    output_field=FloatField()
+                ),
                 output_field=FloatField()
             )
-        ).distinct()
+        ).order_by('-ongoing_lessons', '-completed_lessons')
 
-        # Categorize users
+        # Get detailed lesson data for each learner
         ongoing_users = []
         completed_users = []
         
-        for user_obj in users:
-            data = UserLessonSerializer(user_obj).data
-            if user_obj.ongoing_lessons > 0:
-                ongoing_users.append(data)
-            elif user_obj.completed_lessons > 0:
-                completed_users.append(data)
+        for learner in learners:
+            # Get all lessons for this learner
+            lessons = LearnerBookingSchedule.objects.filter(user=learner)
+            
+            # Serialize the learner data
+            learner_data = UserLessonSerializer(learner).data
+            
+            # Add lesson details
+            learner_data['lessons'] = []
+            
+            for lesson in lessons:
+                lesson_data = {
+                    'date': lesson.date,
+                    'vehicle': lesson.vehicle.id if lesson.vehicle else None,
+                    'location': lesson.location,
+                    'is_completed': lesson.date < today,
+                    'is_ongoing': lesson.date >= today
+                }
+                learner_data['lessons'].append(lesson_data)
+            
+            # Sort lessons by date
+            learner_data['lessons'].sort(key=lambda x: x['date'])
+            
+            # Categorize the learner
+            if learner.ongoing_lessons > 0:
+                ongoing_users.append(learner_data)
+            elif learner.completed_lessons > 0:
+                completed_users.append(learner_data)
         
         return Response({
-            'ongoing_lessons_users': ongoing_users,
-            'completed_lessons_users': completed_users
+            'success': True,
+            'response': {
+                'ongoing_lessons_users': ongoing_users,
+                'completed_lessons_users': completed_users,
+                'stats': {
+                    'total_learners': learners.count(),
+                    'total_ongoing': len(ongoing_users),
+                    'total_completed': len(completed_users),
+                }
+            }
         })
     
