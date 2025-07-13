@@ -34,6 +34,7 @@ from django.db.models import Q, FloatField
 from django.db.models.functions import Cast
 from geopy.distance import geodesic
 from fcm_django.models import FCMDevice
+from django.db.models import Sum
 
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
@@ -1262,15 +1263,42 @@ class WalletAPIView(APIView):
             return Response({'success': False, 'response': {'message': 'Wallet not found'}}, status=status.HTTP_404_NOT_FOUND)
 
 
-
 class TransactionListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         transactions = TransactionHistroy.objects.filter(wallet__user=user).order_by('-created_at')
+
+        # Sum of pending transactions
+        pending_total = TransactionHistroy.objects.filter(
+            wallet__user=user,
+            transaction_status='pending'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Sum of accepted transactions
+        accepted_total = TransactionHistroy.objects.filter(
+            wallet__user=user,
+            transaction_status='Accepedt'
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # Get wallet balance
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+
+        # Round values if they exist
+        total_balance = round(wallet.balance, 2) if wallet.balance is not None else 0
+        pending_total = round(pending_total, 2) if pending_total else 0
+        accepted_total = round(accepted_total, 2) if accepted_total else 0
+
         serializer = TransactionSerializer(transactions, many=True)
-        return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
+
+        return Response({
+            'success': True,
+            'response': serializer.data,
+            'total': total_balance,
+            'pending_total': pending_total,
+            'accepted_total': accepted_total
+        }, status=status.HTTP_200_OK)
     
 class UserNotificationAPIView(APIView):
     permission_classes = [IsAuthenticated]

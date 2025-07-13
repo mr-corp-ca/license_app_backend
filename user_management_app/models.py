@@ -140,7 +140,7 @@ class TransactionHistroy(BaseModelWithCreatedInfo):
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     payment_method = models.CharField(max_length=20, blank=True, null=True ,choices=TRANSACTION_METHOD)
     transaction_type = models.CharField(max_length=15, choices=TRANSACTION_CHOICES)
-    transaction_status = models.CharField(max_length=15, choices=TRANSACTION_STATUS, default='pending')
+    transaction_status = models.CharField(max_length=15, choices=TRANSACTION_STATUS,  blank=True, null=True)
 
     def __str__(self):
         return f"{self.transaction_type} of {self.amount} to {self.wallet.user.username} Wallet"

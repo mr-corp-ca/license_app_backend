@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from decimal import Decimal
 from datetime import date
-from course_management_app.models import Vehicle
+from course_management_app.models import Course, Vehicle
 from timing_slot_app.constants import calculate_end_time, get_day_name, get_schedule_times, validate_even_or_odd,convert_time
 from user_management_app.threads import send_push_notification
 from utils_app.models import Location,Radius
@@ -557,13 +557,17 @@ class LearnerMonthlyScheduleView(APIView):
 
                 school_setting, created = SchoolSetting.objects.get_or_create(user=vehicle.user)
                 school_setting.learner.add(user)
+
+                course = Course.objects.filter(user=vehicle.user).first()
                 return Response({
                     'success': True,
                     'available_slots': available_slots,
                     'locations': serialized_locations,
+                    'hire_car_price': course.hire_car_price,
+
                     'current_location_option': {
                         'location_name': current_location_name,
-                        'additional_charge': 10.00
+                        'current_location_price': radius.current_location_price
                     }
                 }, status=status.HTTP_200_OK)
 
