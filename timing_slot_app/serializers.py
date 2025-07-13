@@ -1,11 +1,15 @@
+from course_management_app.models import Course
 from course_management_app.serializers import VehicleSerializer
 from rest_framework import serializers
 from timing_slot_app.constants import get_day_name
-from user_management_app.models import User
-from user_management_app.serializers import DefaultUserSerializer
+from user_management_app.models import SchoolProfile, User
+from user_management_app.serializers import DefaultUserSerializer, SchoolProfileSerializer
 from utils_app.models import Location
 from utils_app.serializers import LocationSerializer
 from .models import LearnerBookingSchedule, MonthlySchedule, SpecialLesson
+from datetime import date
+from django.conf import settings
+
 
 class MonthlyScheduleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -38,6 +42,68 @@ class GETMonthlyScheduleSerializer(serializers.ModelSerializer):
         if instance.vehicle:
             return VehicleSerializer(instance.vehicle).data
         return None
+
+class LearnerDataScheduleSerializer(serializers.ModelSerializer):
+    is_completed = serializers.SerializerMethodField()
+    is_ongoing = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+    lesson_number = serializers.SerializerMethodField()
+    school = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LearnerBookingSchedule
+        fields = ['id',  'location', 'latitude', 'longitude', 'date', 'slot', 'lesson_name', 'user', 'is_completed', 'is_ongoing', 'vehicle', 'image', 'lesson_number', 'school']
+    
+    def get_school(self, instance):
+        try:
+            if not instance.vehicle or not instance.vehicle.user:
+                return None
+                
+            profile, _ = SchoolProfile.objects.get_or_create(user=instance.vehicle.user)
+            school_data = SchoolProfileSerializer(profile).data
+            return {
+                **school_data,
+                'full_name': instance.vehicle.user.full_name,
+                'logo': instance.vehicle.user.logo.url if instance.vehicle.user.logo else None
+            }
+        except Exception:
+            return None
+    
+    def get_lesson_number(self, instance):
+        try:
+            # Get from prefetched data if possible
+            if hasattr(instance, '_prefetched_objects_cache') and 'user' in instance._prefetched_objects_cache:
+                completed = sum(1 for l in instance.user.learnerweekly_user.all() if l.date < instance.date)
+                return completed + (1 if instance.date >= self.context.get('today', date.today()) else 0)
+            else:
+                today = self.context.get('today', date.today())
+                completed = LearnerBookingSchedule.objects.filter(
+                    user=instance.user,
+                    date__lt=today
+                ).count()
+                return completed + (1 if instance.date >= today else 0)
+        except Exception:
+            return 0
+    
+    def get_is_completed(self, instance):
+        today = date.today()
+        return instance.date < today
+
+    def get_is_ongoing(self, instance):
+        today = date.today()
+        return instance.date >= today
+
+    def get_image(self, instance):
+        course = Course.objects.filter(user=instance.vehicle.user).first()
+        if course and course.lesson.exists():
+            lesson = course.lesson.order_by('?').first()
+            if lesson and lesson.image:
+                domain = getattr(settings, 'DOMAIN', '')
+                return f"{domain}{lesson.image.url}"
+        return None
+
+
+
     
 class GETLearnerBookingScheduleSerializer(serializers.ModelSerializer):
     vehicle = serializers.SerializerMethodField()

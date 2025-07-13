@@ -14,12 +14,14 @@ from utils_app.serializers import LocationSerializer
 from .models import MonthlySchedule,LearnerBookingSchedule, SpecialLesson
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer, UserLessonSerializer
+from .serializers import GETLearnerBookingScheduleSerializer, GETMonthlyScheduleSerializer, LearnerDataScheduleSerializer, MonthlyScheduleSerializer, SpecialLessonSerializer, UserLessonSerializer
 from django.db.models import Min
 from django.shortcuts import get_object_or_404
 from django.db.models import Case, When, Value, IntegerField
 from django.db.models import Count, Q, Min, F, ExpressionWrapper, FloatField, Max
 from django.db.models.functions import Cast
+from django.utils import timezone
+from django.db import transaction
 
 class MonthlyScheduleAPIView(APIView):
     def post(self, request):
@@ -912,103 +914,113 @@ class UpdateSpecialLessonStatusApiView(APIView):
         )
     
 
-
 class LessonDataApiView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
-        user = request.user
-        
-        if user.user_type not in ['school', 'learner']:
+        try:
+            today = timezone.now().date()
+            user = request.user
+            
+            if user.user_type not in ['school', 'learner']:
+                return Response(
+                    {
+                        'success': False,
+                        'response': {
+                            'message': 'You do not have permission to access this data.'
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get the base queryset with prefetch related
+            if user.user_type == 'school':
+                learners = User.objects.filter(
+                    learnerweekly_user__vehicle__user=user,
+                    user_type='learner'
+                ).distinct()
+            elif user.user_type == 'learner':
+                learners = User.objects.filter(id=user.id)
+            
+            # Prefetch related data to reduce queries
+            learners = learners.prefetch_related(
+                Prefetch(
+                    'learnerweekly_user',
+                    queryset=LearnerBookingSchedule.objects.select_related('vehicle', 'vehicle__user')
+                )
+            )
+            
+            # Annotate data
+            learners = learners.annotate(
+                total_lessons=Count('learnerweekly_user'),
+                completed_lessons=Count(
+                    'learnerweekly_user',
+                    filter=Q(learnerweekly_user__date__lt=today)
+                ),
+                ongoing_lessons=Count(
+                    'learnerweekly_user',
+                    filter=Q(learnerweekly_user__date__gte=today)
+                ),
+                earliest_lesson_date=Min('learnerweekly_user__date'),
+                latest_lesson_date=Max('learnerweekly_user__date'),
+                completion_percentage=Case(
+                    When(total_lessons=0, then=0.0),
+                    default=ExpressionWrapper(
+                        Cast(F('completed_lessons'), FloatField()) / 
+                        Cast(F('total_lessons'), FloatField()) * 100,
+                        output_field=FloatField()
+                    ),
+                    output_field=FloatField()
+                )
+            ).order_by('-ongoing_lessons', '-completed_lessons')
+
+            # Get detailed lesson data
+            ongoing_users = []
+            completed_users = []
+            
+            for learner in learners:
+                lessons = learner.learnerweekly_user.all()
+                
+                # Serialize with context to avoid N+1 queries
+                serializer_context = {
+                    'today': today,
+                    'request': request
+                }
+                
+                learner_data = UserLessonSerializer(learner, context=serializer_context).data
+                learner_data['lessons'] = LearnerDataScheduleSerializer(
+                    lessons, 
+                    many=True,
+                    context=serializer_context
+                ).data
+                
+                learner_data['lessons'].sort(key=lambda x: x['date'])
+                
+                if learner.ongoing_lessons > 0:
+                    ongoing_users.append(learner_data)
+                elif learner.completed_lessons > 0:
+                    completed_users.append(learner_data)
+            
+            return Response({
+                'success': True,
+                'response': {
+                    'ongoing_lessons_users': ongoing_users,
+                    'completed_lessons_users': completed_users,
+                    'stats': {
+                        'total_learners': learners.count(),
+                        'total_ongoing': len(ongoing_users),
+                        'total_completed': len(completed_users),
+                    }
+                }
+            })
+            
+        except Exception as e:
             return Response(
                 {
                     'success': False,
                     'response': {
-                        'message': 'You do not have permission to access this data.'
+                        'message': str(e)
                     }
                 },
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-        # Get the base queryset based on user type
-        if user.user_type == 'school':
-            # For school, get all learners associated with their vehicles
-            learners = User.objects.filter(
-                learnerweekly_user__vehicle__user=user,
-                user_type='learner'
-            ).distinct()
-        elif user.user_type == 'learner':
-            # For learner, just get themselves
-            learners = User.objects.filter(id=user.id)
-            
-        # Annotate the learner data with lesson statistics
-        learners = learners.annotate(
-            total_lessons=Count('learnerweekly_user'),
-            completed_lessons=Count(
-                'learnerweekly_user',
-                filter=Q(learnerweekly_user__date__lt=today)
-            ),
-            ongoing_lessons=Count(
-                'learnerweekly_user',
-                filter=Q(learnerweekly_user__date__gte=today)
-            ),
-            earliest_lesson_date=Min('learnerweekly_user__date'),
-            latest_lesson_date=Max('learnerweekly_user__date'),
-            completion_percentage=Case(
-                When(total_lessons=0, then=0.0),
-                default=ExpressionWrapper(
-                    Cast(F('completed_lessons'), FloatField()) / 
-                    Cast(F('total_lessons'), FloatField()) * 100,
-                    output_field=FloatField()
-                ),
-                output_field=FloatField()
-            )
-        ).order_by('-ongoing_lessons', '-completed_lessons')
-
-        # Get detailed lesson data for each learner
-        ongoing_users = []
-        completed_users = []
-        
-        for learner in learners:
-            # Get all lessons for this learner
-            lessons = LearnerBookingSchedule.objects.filter(user=learner)
-            
-            # Serialize the learner data
-            learner_data = UserLessonSerializer(learner).data
-            
-            # Add lesson details
-            learner_data['lessons'] = []
-            
-            for lesson in lessons:
-                lesson_data = {
-                    'date': lesson.date,
-                    'vehicle': lesson.vehicle.id if lesson.vehicle else None,
-                    'location': lesson.location,
-                    'is_completed': lesson.date < today,
-                    'is_ongoing': lesson.date >= today
-                }
-                learner_data['lessons'].append(lesson_data)
-            
-            # Sort lessons by date
-            learner_data['lessons'].sort(key=lambda x: x['date'])
-            
-            # Categorize the learner
-            if learner.ongoing_lessons > 0:
-                ongoing_users.append(learner_data)
-            elif learner.completed_lessons > 0:
-                completed_users.append(learner_data)
-        
-        return Response({
-            'success': True,
-            'response': {
-                'ongoing_lessons_users': ongoing_users,
-                'completed_lessons_users': completed_users,
-                'stats': {
-                    'total_learners': learners.count(),
-                    'total_ongoing': len(ongoing_users),
-                    'total_completed': len(completed_users),
-                }
-            }
-        })
-    

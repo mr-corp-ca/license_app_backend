@@ -1198,6 +1198,8 @@ class ReferralAPIView(APIView):
         serializer = ReferralSerializer(referral)
         return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_201_CREATED)
 
+    # def get(self, request):
+    #     pass
 
 class RoadTestListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]
