@@ -35,6 +35,7 @@ from django.db.models.functions import Cast
 from geopy.distance import geodesic
 from fcm_django.models import FCMDevice
 from django.db.models import Sum
+from django.db import transaction
 
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
@@ -1120,86 +1121,113 @@ class ReferralAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        user = request.user
-        joined_by_code = request.data.get('joined_by')  
-        invited_user_ids = request.data.get('invited_user_ids', [])  
-        referral, created = Referral.objects.get_or_create(user=user)
+        try:
+            # Get the current user and their referral info
+            current_user = request.user
+            referral_code_used = request.data.get('referral_code')
+            
+            if not referral_code_used:
+                return Response({
+                    'success': False,
+                    'response': {'message': 'Referral code is required.'},
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            with transaction.atomic():
+                # Get the referral instance of the current user
+                current_user_referral, created = Referral.objects.get_or_create(user=current_user)
+                
+                # Find who referred this user (the referrer)
+                referrer = None
+                
+                # Check if the code matches a unique_code (institute)
+                referrer_by_institute = Referral.objects.filter(
+                    unique_code=referral_code_used,
+                    user_type='school'
+                ).first()
+                
+                # Check if the code matches a learner_code
+                referrer_by_learner = Referral.objects.filter(
+                    learner_code=referral_code_used,
+                    user_type='learner'
+                ).first()
+                
+                referrer = referrer_by_institute or referrer_by_learner
+                
+                if not referrer:
+                    return Response({
+                        'success': False,
+                        'response': {'message': 'Invalid referral code.'},
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Update the current user's joined_by field
+                current_user_referral.joined_by = referral_code_used
+                current_user_referral.save()
+                
+                # Add the current user to the referrer's invited_users
+                referrer.invited_users.add(current_user)
+                
+                # Process earnings based on referrer's user_type
+                if referrer.user_type == 'school':
+                    # Add $5 for school/institute referral
+                    referrer.total_earnings += 5
+                    referrer.save()
+                elif referrer.user_type == 'learner':
+                    # For learner, increment count and check if they reached 10 referrals
+                    referrer.referral_count += 1
+                    
+                    if referrer.referral_count % 10 == 0:
+                        referrer.total_earnings += 1
+                    
+                    referrer.save()
+                
+                return Response({
+                    'success': True,
+                    'response': {
+                        'message': 'Referral processed successfully.',
+                    },
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response({
+                'success': False,
+                'response': {'message': 'An error occurred while processing the referral.'},
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    
 
-        # Ensure the user has a wallet
-        wallet, _ = Wallet.objects.get_or_create(user=user)
+    def get(self, request):
+        reference_code, created = Referral.objects.get_or_create(user=request.user)
 
-        with transaction.atomic():  # Ensure atomic updates
-            if joined_by_code:
-                if referral.unique_code == joined_by_code:
-                    return Response(
-                        {'success': False, 'response': {'message': 'You cannot use your own referral code.'}},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+        total_institutte_earning = reference_code.invited_users.filter(user_type='school').count() * 5
 
-                if not referral.joined_by:
-                    try:
-                        referred_by = Referral.objects.get(unique_code=joined_by_code)
+        total_institutte = reference_code.invited_users.filter(user_type='school')
+        total_learner = reference_code.invited_users.filter(user_type='learner')
 
-                        if referred_by.invited_users.filter(id=user.id).exists():
-                            return Response(
-                                {'success': False, 'response': {'message': 'You are already referred by this code.'}},
-                                status=status.HTTP_400_BAD_REQUEST
-                            )
 
-                        referral.joined_by = joined_by_code
-                        referred_by.invited_users.add(user)
 
-                        referred_wallet, _ = Wallet.objects.get_or_create(user=referred_by.user)
+        data_dict = {
+            'learner_refer': 'Refer a Learner & you will Get $1 for 10 Learners.',
+            'schoolr_refer': 'Refer an institute & you will Get $5 for Each.',
+            'is_reference_used': True if reference_code.joined_by else False,
 
-                        if referred_by.user.user_type == 'school':
-                            referred_by.referral_count += 1
-                            referred_by.save()
+            'learner': {
+                'code': reference_code.learner_code,
+                'total_earning': reference_code.total_earnings - total_institutte_earning ,
+                'data': ReferenceUserSerializer(total_learner, many=True).data
+                
+                },
+            'institute_code': {
+               'code' : reference_code.unique_code,
+                'total_earning': total_institutte_earning,
+                'data': ReferenceUserSerializer(total_institutte, many=True).data
 
-                            if referred_by.referral_count % 10 == 0:
-                                referred_by.total_earnings += 1.0
-                                referred_wallet.balance += 1.0  
-                                referred_wallet.save()
 
-                                TransactionHistroy.objects.create(
-                                    school=referred_by.user,
-                                    wallet=referred_wallet,
-                                    amount=1.0,
-                                    transaction_type='credit',
-                                    transaction_status='completed'
-                                )
-
-                        else:
-                            referred_by.total_earnings += 1.0
-                            referred_wallet.balance += 1.0  
-                            referred_wallet.save()
-
-                            TransactionHistroy.objects.create(
-                                wallet=referred_wallet,
-                                amount=1.0,
-                                transaction_type='credit',
-                                transaction_status='completed'
-                            )
-
-                        referred_by.user.save()
-                        referred_by.save()
-                    except Referral.DoesNotExist:
-                        return Response(
-                            {'success': False, 'response': {'message': 'Invalid referral code.'}},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-
-            if invited_user_ids:
-                invited_users = User.objects.filter(id__in=invited_user_ids).exclude(id=user.id)
-                if invited_users.exists():
-                    referral.invited_users.add(*invited_users)
-
-            referral.save()
-
-        serializer = ReferralSerializer(referral)
-        return Response({'success': True, 'response': {'data': serializer.data}}, status=status.HTTP_201_CREATED)
-
-    # def get(self, request):
-    #     pass
+               },
+        }
+        return Response({'success': True, 'response': {'data': data_dict}}, status=status.HTTP_201_CREATED)
+        
+        
 
 class RoadTestListAPIView(ListAPIView):
     authentication_classes = [TokenAuthentication]

@@ -200,16 +200,45 @@ class SchoolProfile(BaseModelWithCreatedInfo):
 
 class Referral(BaseModelWithCreatedInfo):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="referral")
-    unique_code = models.SlugField(unique=True, blank=False, null=False)
+    unique_code = models.SlugField(unique=True, blank=True, null=True, help_text="This code is for institute")
+    learner_code = models.SlugField(unique=True, blank=True, null=True, help_text="This code is for learner")
     joined_by = models.CharField(max_length=255, blank=True, null=True, help_text="Code of the user who referred this user.")
     invited_users = models.ManyToManyField(User, related_name="invited_by", blank=True)
-    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    total_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, blank=True, null=True)
     user_type = models.CharField(max_length=10, choices=USER_REFERRAL_TYPE, default='learner')
     referral_count = models.IntegerField(default=0) 
 
+    def generate_next_code(self, last_code):
+            """Helper function to increment GEARUP code"""
+            if last_code and last_code.startswith("GEARUP"):
+                try:
+                    number = int(last_code.replace("GEARUP", ""))
+                    return f"GEARUP{number + 1:04}"
+                except ValueError:
+                    pass
+            return "GEARUP0001"
+
     def save(self, *args, **kwargs):
-        if not self.unique_code:
-            self.unique_code = slugify(f"GEARUP{self.user.id:04}")  
+        if not self.learner_code or not self.unique_code:
+            latest_referral = Referral.objects.order_by('-id').first()
+
+            # Start with GEARUP0001 if no objects exist
+            last_learner_code = latest_referral.learner_code if latest_referral and latest_referral.learner_code else None
+            last_unique_code = latest_referral.unique_code if latest_referral and latest_referral.unique_code else None
+
+            new_learner_code = self.generate_next_code(last_learner_code)
+            new_unique_code = self.generate_next_code(new_learner_code)  # ensure it's always different
+
+            # Ensure uniqueness and difference
+            while Referral.objects.filter(learner_code=new_learner_code).exists():
+                new_learner_code = self.generate_next_code(new_learner_code)
+
+            while Referral.objects.filter(unique_code=new_unique_code).exists() or new_unique_code == new_learner_code:
+                new_unique_code = self.generate_next_code(new_unique_code)
+
+            self.learner_code = new_learner_code
+            self.unique_code = new_unique_code
+
         super().save(*args, **kwargs)
 
     def __str__(self):

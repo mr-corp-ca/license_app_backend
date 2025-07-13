@@ -590,3 +590,8 @@ class RecentTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionHistroy
         fields = ['id', 'learner_name', 'learner_profile', 'amount', 'payment_method', 'transaction_type', 'transaction_status', 'created_at']
+
+class ReferenceUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email']
