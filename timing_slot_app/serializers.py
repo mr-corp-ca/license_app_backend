@@ -132,13 +132,20 @@ class UserLessonSerializer(serializers.ModelSerializer):
         fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson', 'attend_percentage', 'logo', 'paid_price', 'school_name']
             
     def get_school_name(self, instance):
-        package = LearnerSelectedPackage.objects.filter(user=instance).order_by('-created_at').first()
+        learner = LearnerBookingSchedule.objects.filter(user=instance).order_by('-created_at').first()
         
-        if not package or not package.package or not package.package.user:
+        if not learner or not getattr(learner, 'vehicle', None) or not getattr(learner.vehicle, 'user', None):
             return None
 
-        school_profile = SchoolProfile.objects.filter(user=package.package.user).first()
-        return school_profile.institute_name if school_profile else None
+        school_user = learner.vehicle.user
+        school_profile = SchoolProfile.objects.filter(user=school_user).first()
+
+        if school_profile and school_profile.institute_name:
+            return school_profile.institute_name
+        elif school_user.full_name:
+            return school_user.full_name
+
+        return None
 
     def get_paid_price(self, instance):
         if instance.user_type != 'learner':
