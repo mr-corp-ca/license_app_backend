@@ -55,35 +55,25 @@ class LearnerDataScheduleSerializer(serializers.ModelSerializer):
         fields = ['id',  'location', 'latitude', 'longitude', 'date', 'slot', 'lesson_name', 'user', 'is_completed', 'is_ongoing', 'vehicle', 'image', 'lesson_number', 'school']
     
     def get_school(self, instance):
-        try:
-            if not instance.vehicle or not instance.vehicle.user:
-                return None
-                
-            profile, _ = SchoolProfile.objects.get_or_create(user=instance.vehicle.user)
-            school_data = SchoolProfileSerializer(profile).data
-            return {
-                **school_data,
-                'full_name': instance.vehicle.user.full_name,
-                'logo': instance.vehicle.user.logo.url if instance.vehicle.user.logo else None
-            }
-        except Exception:
-            return None
-    
+        profile, _ = SchoolProfile.objects.get_or_create(user=instance.vehicle.user)
+        school_data = SchoolProfileSerializer(profile).data
+        return {
+            **school_data,
+            'full_name': instance.vehicle.user.full_name,
+            'logo': instance.vehicle.user.logo.url if instance.vehicle.user.logo else None
+        }
+
     def get_lesson_number(self, instance):
-        try:
-            # Get from prefetched data if possible
-            if hasattr(instance, '_prefetched_objects_cache') and 'user' in instance._prefetched_objects_cache:
-                completed = sum(1 for l in instance.user.learnerweekly_user.all() if l.date < instance.date)
-                return completed + (1 if instance.date >= self.context.get('today', date.today()) else 0)
-            else:
-                today = self.context.get('today', date.today())
-                completed = LearnerBookingSchedule.objects.filter(
-                    user=instance.user,
-                    date__lt=today
-                ).count()
-                return completed + (1 if instance.date >= today else 0)
-        except Exception:
-            return 0
+
+        today = date.today()
+        completed_lessons = LearnerBookingSchedule.objects.filter(
+            user=instance.user,
+            date__lt=today
+        ).count()
+
+        if instance.date < today:
+            return completed_lessons
+        return completed_lessons + 1
     
     def get_is_completed(self, instance):
         today = date.today()
