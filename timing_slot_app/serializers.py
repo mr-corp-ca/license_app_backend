@@ -1,4 +1,4 @@
-from course_management_app.models import Course
+from course_management_app.models import Course, LearnerSelectedPackage
 from course_management_app.serializers import VehicleSerializer
 from rest_framework import serializers
 from timing_slot_app.constants import get_day_name
@@ -123,15 +123,39 @@ class UserLessonSerializer(serializers.ModelSerializer):
     attend_lesson = serializers.SerializerMethodField()
     start_date = serializers.SerializerMethodField()
     attend_percentage = serializers.SerializerMethodField()
+    logo = serializers.SerializerMethodField()
+    paid_price = serializers.SerializerMethodField()
+    school_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson', 'attend_percentage']
-    
+        fields = ['id', 'full_name', 'total_lesson', 'start_date', 'attend_lesson', 'attend_percentage', 'logo', 'paid_price', 'school_name']
+            
+    def get_school_name(self, instance):
+        package = LearnerSelectedPackage.objects.filter(user=instance).order_by('-created_at').first()
+        
+        if not package or not package.package or not package.package.user:
+            return None
+
+        school_profile = SchoolProfile.objects.filter(user=package.package.user).first()
+        return school_profile.institute_name if school_profile else None
+
+    def get_paid_price(self, instance):
+        if instance.user_type != 'learner':
+            return None
+        package = LearnerSelectedPackage.objects.filter(user=instance).order_by('-created_at').first()
+        return package.package.price if package and package.package else None
+
     def get_attend_percentage(self, instance):
         if instance.total_lessons > 0:
             return round((instance.completed_lessons / instance.total_lessons) * 100, 2)
         return 0.0
+    
+    def get_logo(self, instance):
+        if instance.logo:
+            domain = getattr(settings, 'DOMAIN', '')
+            return f"{domain}{instance.logo.url}"
+        return None
     
     def get_total_lesson(self, instance):
         return getattr(instance, 'total_lessons', 0)

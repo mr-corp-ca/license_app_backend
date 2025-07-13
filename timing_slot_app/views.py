@@ -975,7 +975,7 @@ class LessonDataApiView(APIView):
             lessons = LearnerBookingSchedule.objects.filter(user=learner)
             
             # Serialize the learner data
-            learner_data = UserLessonSerializer(learner).data
+            learner_data = UserLessonSerializer(learner, context={'user': user}).data
             
             # Add lesson details
             learner_data['lessons'] = LearnerDataScheduleSerializer(lessons, many=True).data
