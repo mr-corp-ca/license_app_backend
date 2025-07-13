@@ -139,7 +139,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 class UserNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserNotification
-        fields = ['id', 'user', 'status', 'noti_type', 'description']   
+        fields = '__all__'  
         
 
 class LearnerReportSerializer(serializers.ModelSerializer):

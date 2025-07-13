@@ -1271,6 +1271,15 @@ class TransactionListAPIView(APIView):
         transactions = TransactionHistroy.objects.filter(wallet__user=user).order_by('-created_at')
         serializer = TransactionSerializer(transactions, many=True)
         return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
+    
+class UserNotificationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        notifications = UserNotification.objects.filter(user=user).order_by('-created_at')
+        serializer = UserNotificationSerializer(notifications, many=True)
+        return Response({'success': True, 'response': serializer.data}, status=status.HTTP_200_OK)
 
 
 

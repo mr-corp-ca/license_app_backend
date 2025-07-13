@@ -34,5 +34,6 @@ urlpatterns = [
     path('Wallet/',WalletAPIView.as_view()),
     path('SchoolList', SchoolListAPIView.as_view()),
     path('SchoolStatic', SchoolStaticAPIView.as_view()),
+    path('UserNotification', UserNotificationAPIView.as_view()),
     # path('WalletHistory/',WalletHistoryAPIView.as_view()),
 ]
