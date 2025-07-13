@@ -88,8 +88,7 @@ class LearnerDataScheduleSerializer(serializers.ModelSerializer):
         if course and course.lesson.exists():
             lesson = course.lesson.order_by('?').first()
             if lesson and lesson.image:
-                domain = getattr(settings, 'DOMAIN', '')
-                return f"{domain}{lesson.image.url}"
+                return lesson.image.url
         return None
 
 
@@ -160,8 +159,7 @@ class UserLessonSerializer(serializers.ModelSerializer):
     
     def get_logo(self, instance):
         if instance.logo:
-            domain = getattr(settings, 'DOMAIN', '')
-            return f"{domain}{instance.logo.url}"
+            return instance.logo.url
         return None
     
     def get_total_lesson(self, instance):
