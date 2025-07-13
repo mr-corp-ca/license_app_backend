@@ -357,7 +357,7 @@ class SubscriptionPackagePlanSerializer(serializers.ModelSerializer):
 
     def get_is_packge(self, instance):
         user = self.context.get('user')
-        subscription = SelectedSubscriptionPackagePaln.objects.filter(user=user).order_by('-created_at').first()
+        subscription = SelectedSubscriptionPackagePaln.objects.filter(user=user, package_plan=instance).order_by('-created_at').first()
         return bool(subscription and subscription.expired > now())        
 
 class SelectedSubscriptionPackagePlanSerializer(serializers.ModelSerializer):
