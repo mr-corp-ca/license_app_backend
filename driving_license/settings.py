@@ -4,6 +4,9 @@ import firebase_admin
 from firebase_admin import credentials
 from dotenv import load_dotenv
 load_dotenv()
+from celery import Celery
+from celery.schedules import crontab
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
     'timing_slot_app',
     'user_management_app',
     'course_management_app',
+    'django_celery_beat',
 
 ]
 
@@ -168,8 +172,51 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+# Celery Setting # settings.py
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
+
+# CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_TIMEZONE = "America/Winnipeg"
+CELERY_ENABLE_UTC = True  
+# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERYD_POOL = 'prefork'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
+
+
+CELERY_BEAT_SCHEDULE = {
+    'course_progrress': {
+        'task': 'user_management_app.tasks.send_course_progress_notifications',
+        'schedule': crontab(hour=10, minute=00),
+    },
+    'course_progrress': {
+        'task': 'user_management_app.tasks.check_incomplete_profiles',
+        'schedule': crontab(hour=19, minute=00),
+    },
+    
+    'send-day-before-reminders': {
+        'task': 'user_management_app.tasks.send_lesson_reminder_day_before',
+        'schedule': crontab(hour=20, minute=0),  
+    },
+    'send-5-min-reminders': {
+        'task': 'user_management_app.tasks.send_lesson_reminder_5_min_before',
+        'schedule': crontab(minute='*/5'),
+    },
+    'notification_one_hour_checks': {
+        'task': 'user_management_app.tasks.notification_checks',
+         'schedule': timedelta(hours=1),
+    },
+}
 
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'

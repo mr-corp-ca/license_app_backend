@@ -37,6 +37,7 @@ from fcm_django.models import FCMDevice
 from django.db.models import Sum
 from django.db import transaction
 
+
 # from geopy.point import Point
 # from django.contrib.gis.geos import Point
 from django.conf import settings
@@ -114,9 +115,10 @@ class UserApiView(APIView):
             serializer = SchoolUserSerializer(user)
         elif user.user_type == 'learner':
             serializer = DefaultUserSerializer(user)
-        
+    
         else:
             return Response({"success": False, 'response': {"message": "Invalid user type!"}}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({"success": True, 'response': {"data": serializer.data}}, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -304,7 +306,26 @@ class VerifyOTPView(APIView):
         access_token = token.key
 
         if user_type == 'school':
-           serializer = SchoolUserSerializer(user)
+            serializer = SchoolUserSerializer(user)
+            if user.firt_time:
+                title = "School Registration Under Review 🔍"
+                message = "🕒 Your school registration is currently under review. We will notify you once the process is complete."
+                noti_type = 'general'
+                send_push_notification(
+                user=user,
+                title=title,
+                message=message,
+                noti_type=noti_type
+            )
+            
+                UserNotification.objects.create(
+                    user=self,
+                    title=title,
+                    text=message,
+                    noti_type=noti_type
+                )
+                user.firt_time = False
+                user.save()
         elif user_type =='learner':
             serializer = DefaultUserSerializer(user)
         else:

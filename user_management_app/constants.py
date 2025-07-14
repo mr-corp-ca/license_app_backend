@@ -44,6 +44,14 @@ USER_STATUS_CHOICES = [
     ('rejected', 'Rejected'),
 ]
 
+COURSE_PROGRESS_CHOICES = [
+    ('25', '25'),
+    ('50', '50'),
+    ('75', '75'),
+    ('100', '100'),
+    ('done', 'Done'),
+]
+
 RATING_CHOICES = [
         (1, '1 - Disappointed'),
         (2, '2'),
@@ -114,3 +122,12 @@ DELETED_REASON = [
     ('spam', 'Spam'),
     ('other', 'Other')
     ]
+
+def get_masked_phone_number(user):
+    if user.full_name:
+        return user.full_name.capitalize()
+    if user.phone_number and len(user.phone_number) >= 4:
+        return f"{user.phone_number[:2]}{'*' * (len(user.phone_number) - 4)}{user.phone_number[-2:]}"
+    else:
+        return "Learner"
+    

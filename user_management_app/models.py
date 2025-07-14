@@ -7,7 +7,7 @@ from django.utils.text import slugify
 from user_management_app.constants import *
 from course_management_app.models import *
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-
+        
 class MyAccountManager(BaseUserManager):
     def create_user(self, phone_number, username, password=None):
         if not phone_number:
@@ -57,6 +57,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     city = models.ForeignKey('utils_app.City', on_delete=models.SET_NULL, null=True, blank=True)
     social_platform = models.CharField(max_length=255, choices=SOCIAL_PLATFORM_CHOICES, null=True, blank=True)
     user_status = models.CharField(max_length=255,  choices=USER_STATUS_CHOICES, default='pending', null=True, blank=True)
+    course_progress = models.CharField(max_length=255,  choices=COURSE_PROGRESS_CHOICES, default='25', null=True, blank=True)
+
     lat = models.DecimalField(
         max_digits=9, 
         decimal_places=6, 
@@ -73,6 +75,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     is_deleted = models.BooleanField(default=False)
+    firt_time = models.BooleanField(default=True)
     deletd_reason =  models.CharField(max_length=255, choices=DELETED_REASON, null=True, blank=True)
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['phone_number']
@@ -92,6 +95,60 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
+    def save(self, *args, **kwargs):
+        # Check if this is an existing user being updated
+        if self.pk:
+            try:
+                # Get the previous state from database
+                old_user = User.objects.get(pk=self.pk)
+                
+                # Check if this is a school whose status is changing from pending
+                if (old_user.user_type == 'school' and 
+                    old_user.user_status == 'pending' and 
+                    self.user_status != old_user.user_status):
+                    
+                    if self.user_status == 'approved':
+                        # Avoid recursive save - update fields directly
+                        self.is_active = True
+                        super().save(*args, **kwargs)
+                        
+                        # Send notification after save
+                        title = "🎉 School Approved!"
+                        message = "🎉 Congratulations! Your school registration has been approved. ✅"
+
+                        self._send_notification(title, message, 'general')
+                        
+                    elif self.user_status == 'rejected':
+                        super().save(*args, **kwargs)
+                        # Send notification after save
+                        title = "❌ School Registration Rejected"
+                        message = "🚫 Your school registration was rejected. Please contact support. 📞"
+
+                        self._send_notification(title, message, 'general')
+                        
+                    return
+                    
+            except User.DoesNotExist:
+                pass
+        
+        # Normal save for all other cases
+        super().save(*args, **kwargs)
+
+    def _send_notification(self, title, message, noti_type):
+        """Helper method to send notifications"""
+        send_push_notification(
+            user=self,
+            title=title,
+            message=message,
+            noti_type=noti_type
+        )
+        
+        UserNotification.objects.create(
+            user=self,
+            title=title,
+            text=message,
+            noti_type=noti_type
+        )
 
 class UserVerification(BaseModelWithCreatedInfo):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -268,3 +325,11 @@ class DiscountCoupons(BaseModelWithCreatedInfo):
     def is_expired(self):
         """Check if the coupon is expired based on school-defined expiration time."""
         return now() > self.created_at + timedelta(hours=self.expiration_time)
+
+class UserNotificationsType(BaseModelWithCreatedInfo):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usernotificaation_notitype_user')
+    is_lesson_reminder1 = models.BooleanField(default=True, help_text='One day before notification check')
+    is_lesson_reminder2 = models.BooleanField(default=True, help_text='5 minutes before notification check')
+    is_course_progress = models.BooleanField(default=True)
+    is_profile_complete = models.BooleanField(default=True)
+    
