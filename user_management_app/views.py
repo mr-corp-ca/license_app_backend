@@ -307,25 +307,25 @@ class VerifyOTPView(APIView):
 
         if user_type == 'school':
             serializer = SchoolUserSerializer(user)
-            if user.firt_time:
-                title = "School Registration Under Review 🔍"
-                message = "🕒 Your school registration is currently under review. We will notify you once the process is complete."
-                noti_type = 'general'
-                send_push_notification(
-                user=user,
+            # if user.firt_time:
+            title = "School Registration Under Review 🔍"
+            message = "🕒 Your school registration is currently under review. We will notify you once the process is complete."
+            noti_type = 'general'
+            send_push_notification(
+            user=user,
+            title=title,
+            message=message,
+            noti_type=noti_type
+        )
+        
+            UserNotification.objects.create(
+                user=self,
                 title=title,
-                message=message,
+                text=message,
                 noti_type=noti_type
             )
-            
-                UserNotification.objects.create(
-                    user=self,
-                    title=title,
-                    text=message,
-                    noti_type=noti_type
-                )
-                user.firt_time = False
-                user.save()
+            user.firt_time = False
+            user.save()
         elif user_type =='learner':
             serializer = DefaultUserSerializer(user)
         else:
