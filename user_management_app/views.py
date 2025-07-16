@@ -275,7 +275,7 @@ class VerifyOTPView(APIView):
         user_d_id = request.data.get('device_id' , None)
 
         user = User.objects.filter(phone_number=phone_number).first()
-        # otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
+        otp_code = UserVerification.objects.filter(user=user, code=code, is_varified=False).first()
 
         # if not otp_code:
             # return Response({"success": False, 'response': {"message":"your code did not match please try again with a valid code"}}, status=status.HTTP_400_BAD_REQUEST)
@@ -319,7 +319,7 @@ class VerifyOTPView(APIView):
             )
             
                 UserNotification.objects.create(
-                    user=self,
+                    user=user,
                     title=title,
                     text=message,
                     noti_type=noti_type
