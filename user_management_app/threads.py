@@ -11,6 +11,8 @@ from firebase_admin import messaging
 from fcm_django.models import FCMDevice
 from firebase_admin.messaging import Message
 from firebase_admin.messaging import Notification as FB_Notification
+import firebase_admin
+from firebase_admin import credentials
 
 def send_email_code(code, user):
     if code is None:
@@ -46,32 +48,42 @@ def send_email_code(code, user):
     except Exception as e:
         print('******  email  **',e)
 
-
 def send_push_notification(user, title, message, notification_type):
     current_datetime = datetime.now()
     try:
+        # Ensure Firebase app is initialized
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+            firebase_admin.initialize_app(cred)
+
         fb_body = {
             'created_at': str(current_datetime),
-            'text': message,
+            'text': str(message),
             'type': 'accept',
-            'notification_type': notification_type,
+            'notification_type': str(notification_type),
         }
         
         devices = FCMDevice.objects.filter(user=user)
         
         for device in devices:
-            respoonse = device.send_message(
-                Message(
-                    data=fb_body,
-                    notification=FB_Notification(
-                        title=title,
-                        body=fb_body['text'],
+            try:
+                response = device.send_message(
+                    Message(
+                        data=fb_body,
+                        notification=FB_Notification(
+                            title=str(title),
+                            body=str(fb_body['text']),
+                        )
                     )
                 )
-            )
-            print('*******', respoonse)
+                print('Notification sent:', response)
+            except Exception as device_error:
+                print(f'Device send error ({device.id}):', device_error)
+                
+    except ValueError as e:
+        print('Firebase init error:', e)
     except Exception as e:
-        print('******* errorrr *****', e)
+        print('Notification error:', e)
 
 def send_sms(phone_number, message):
     account_sid = settings.ACCOUNT_SID

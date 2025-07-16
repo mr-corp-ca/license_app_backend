@@ -83,3 +83,5 @@ class DiscountCouponsAdmin(admin.ModelAdmin):
         return obj.is_expired()
     is_expired.boolean = True
     is_expired.short_description = "Expired?"
+
+admin.site.register(UserNotificationsType)
