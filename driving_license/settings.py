@@ -157,7 +157,8 @@ REST_FRAMEWORK = {
   }
 
 
-cred = credentials.Certificate("cred/gearup-f9aa6-firebase-adminsdk-tfvhx-345813eaed.json")
+# cred = credentials.Certificate("cred/gearup-f9aa6-firebase-adminsdk-tfvhx-345813eaed.json")
+cred = credentials.Certificate("cred/drivinglicese-761f3-firebase-adminsdk-fbsvc-c6a1429da3.json")
 firebase_admin.initialize_app(cred)
 
 DEFAULT_FILE_STORAGE = 'driving_license.custom_storage.CustomFileSystemStorage'
@@ -199,9 +200,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'user_management_app.tasks.send_course_progress_notifications',
         'schedule': crontab(hour=10, minute=00),
     },
-    'course_progrress': {
+    'incomplete_profile': {
         'task': 'user_management_app.tasks.check_incomplete_profiles',
-        'schedule': crontab(hour=19, minute=00),
+        # 'schedule': crontab(hour=19, minute=00),
+        'schedule': crontab(minute='*/1'),
     },
     
     'send-day-before-reminders': {
