@@ -312,10 +312,10 @@ class VerifyOTPView(APIView):
             message = "🕒 Your school registration is currently under review. We will notify you once the process is complete."
             noti_type = 'general'
             send_push_notification(
-            user=user,
-            title=title,
-            message=message,
-            noti_type=noti_type
+            user,
+            title,
+            message,
+            noti_type
         )
         
             UserNotification.objects.create(
@@ -653,7 +653,8 @@ class UserNotificationAPIView(APIView):
                     notification = serializer.save()
                     title = request.data.get('title', 'New Notification')
                     message = request.data.get('description', 'You have a new notification.')
-                    send_push_notification(user, title, message)
+                    notification_type = 'general'
+                    send_push_notification(user, title, message, notification_type)
                 else:
                     return Response({"success": False, 'response': {"message": serializer.errors}},
                                      status=status.HTTP_400_BAD_REQUEST)

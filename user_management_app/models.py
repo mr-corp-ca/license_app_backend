@@ -137,10 +137,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def _send_notification(self, title, message, noti_type):
         """Helper method to send notifications"""
         send_push_notification(
-            user=self,
-            title=title,
-            message=message,
-            noti_type=noti_type
+            self,
+            title,
+            message,
+            noti_type
         )
         
         UserNotification.objects.create(

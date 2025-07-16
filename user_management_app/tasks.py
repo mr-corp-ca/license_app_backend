@@ -63,10 +63,10 @@ def send_course_progress_notifications():
                 noti_type = 'general'
                 send_push_notification(user, title, message, noti_type)
                 UserNotification.objects.create(
-                    user=user,
-                    title=title,
-                    text=message,
-                    noti_type=noti_type
+                    user,
+                    title,
+                    message,
+                    noti_type
                 )
             obj.is_course_progress = False
             obj.save()
@@ -92,10 +92,10 @@ def check_incomplete_profiles():
             noti_type = 'general'
 
             send_push_notification(
-                user=user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                user,
+                title,
+                message,
+                noti_type
             )
             user_status = 'pending'
             send_push_notification(user, title, message, noti_type)
@@ -128,10 +128,10 @@ def check_incomplete_profiles():
             noti_type = 'general'
 
             send_push_notification(
-                user=school.user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                school.user,
+                title,
+                message,
+                noti_type
             )
             UserNotification.objects.create(
                 user=school.user,
@@ -162,10 +162,10 @@ def send_lesson_reminder_day_before():
             noti_type = 'general'
 
             send_push_notification(
-                user=lesson.user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                lesson.user,
+                title,
+                message,
+                noti_type
             )
             UserNotification.objects.create(
                 user=lesson.user,
@@ -180,10 +180,10 @@ def send_lesson_reminder_day_before():
             title="⏰ Lesson Reminder",
             message=f"You have a lesson scheduled tomorrow at {lesson.slot} with {get_masked_phone_number(lesson.user)}",
             send_push_notification(
-                user=lesson.vehicle.user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                lesson.vehicle.user,
+                title,
+                message,
+                noti_type
             )
             UserNotification.objects.create(
                 user=lesson.vehicle.user,
@@ -217,10 +217,10 @@ def send_lesson_reminder_5_min_before():
             noti_type = 'general'
 
             send_push_notification(
-                user=lesson.user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                lesson.user,
+                title,
+                message,
+                noti_type
             )
 
             UserNotification.objects.create(
@@ -237,10 +237,10 @@ def send_lesson_reminder_5_min_before():
             title="⏰ Lesson Starting Soon",
             message=f"Your lesson with {get_masked_phone_number(lesson.user)} starts in 5 minutes at {lesson.location}",
             send_push_notification(
-                user=lesson.vehicle.user,
-                title=title,
-                message=message,
-                noti_type=noti_type
+                lesson.vehicle.user,
+                title,
+                message,
+                noti_type
             )
             UserNotification.objects.create(
                 user=lesson.vehicle.user,
