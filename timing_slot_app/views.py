@@ -22,280 +22,233 @@ from django.db.models import Count, Q, Min, F, ExpressionWrapper, FloatField, Ma
 from django.db.models.functions import Cast
 
 class MonthlyScheduleAPIView(APIView):
+
     def post(self, request):
         serializer = MonthlyScheduleSerializer(data=request.data, many=True)
         if serializer.is_valid():
+            results = []
             for item in serializer.validated_data:
                 try:
-                    date_str = item['date'].strftime('%Y-%m-%d')
-
-                    # Calculate end_time based on operation_hour if provided
-                    if 'operation_hour' in item and item['operation_hour']:
-                        operation_hours = int(item['operation_hour'])
-                        start_datetime = datetime.combine(item['date'], item['start_time'])
-                        end_datetime = start_datetime + timedelta(hours=operation_hours)
-                        item['end_time'] = end_datetime.time()
-                    else:
-                        item['end_time'] = item.get('end_time', item['start_time'])
-
-                    # Calculate all lesson time slots first
-                    lesson_slots = self.calculate_lesson_slots(item)
-
-                    # Get all valid break start times (lesson end times)
-                    valid_break_times = [slot['end'] for slot in lesson_slots if slot['type'] == 'lesson']
-                    
-                    # If no lessons, break times must be None
-                    if not valid_break_times:
-                        if item.get('launch_break_start') or item.get('launch_break_end'):
-                            raise ValueError(
-                                f"On {date_str}: Cannot set break times when there are no lessons scheduled"
-                            )
-                        if item.get('extra_space_start') or item.get('extra_space_end'):
-                            raise ValueError(
-                                f"On {date_str}: Cannot set extra space times when there are no lessons scheduled"
-                            )
-                    else:
-                        # Validate launch break times
-                        if item.get('launch_break_start') or item.get('launch_break_end'):
-                            if not (item.get('launch_break_start') and item.get('launch_break_end')):
-                                raise ValueError(
-                                    f"On {date_str}: Both launch break start and end times must be provided"
-                                )
-                            
-                            if item['launch_break_start'] not in valid_break_times:
-                                raise ValueError(
-                                    f"On {date_str}: Launch break must start exactly when a lesson ends. "
-                                    f"Valid start times: {', '.join([t.strftime('%H:%M') for t in valid_break_times])}"
-                                )
-                            
-                            # Ensure break end is after start and within schedule
-                            if item['launch_break_start'] >= item['launch_break_end']:
-                                raise ValueError(
-                                    f"On {date_str}: Launch break end time must be after start time"
-                                )
-                            
-                            if item['launch_break_end'] > item['end_time']:
-                                raise ValueError(
-                                    f"On {date_str}: Launch break must end within scheduled hours "
-                                    f"({item['end_time'].strftime('%H:%M')})"
-                                )
-
-                        # Validate extra space times
-                        if item.get('extra_space_start') or item.get('extra_space_end'):
-                            if not (item.get('extra_space_start') and item.get('extra_space_end')):
-                                raise ValueError(
-                                    f"On {date_str}: Both extra space start and end times must be provided"
-                                )
-                            
-                            if item['extra_space_start'] not in valid_break_times:
-                                raise ValueError(
-                                    f"On {date_str}: Extra space must start exactly when a lesson ends. "
-                                    f"Valid start times: {', '.join([t.strftime('%H:%M') for t in valid_break_times])}"
-                                )
-                            
-                            # Ensure extra space end is after start and within schedule
-                            if item['extra_space_start'] >= item['extra_space_end']:
-                                raise ValueError(
-                                    f"On {date_str}: Extra space end time must be after start time"
-                                )
-                            
-                            if item['extra_space_end'] > item['end_time']:
-                                raise ValueError(
-                                    f"On {date_str}: The extra space end time falls within the lesson time. The suggested time is "
-                                    f"({item['end_time'].strftime('%H:%M')})"
-                                )
-
-                        # Validate breaks and extra spaces don't overlap
-                        if (item.get('launch_break_start') and item.get('launch_break_end') and
-                            item.get('extra_space_start') and item.get('extra_space_end')):
-                            self.validate_no_overlap(
-                                item['launch_break_start'],
-                                item['launch_break_end'],
-                                item['extra_space_start'],
-                                item['extra_space_end'],
-                                "Launch break",
-                                "Extra space",
-                                date_str
-                            )
-
-                    # Save the schedule
-                    item['user'] = request.user
-                    MonthlySchedule.objects.update_or_create(
-                        user=request.user, 
-                        date=item['date'], 
-                        defaults=item
-                    )
-
+                    result = self.process_schedule_item(item, request.user)
+                    results.append(result)
                 except ValueError as e:
                     return Response(
                         {
                             'success': False,
                             'message': str(e),
-                            'date': date_str,
-                            'available_times': getattr(e, 'available_times', None)
+                            'date': item['date'].strftime('%Y-%m-%d')
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )
-
+            
             return Response(
-                {"success": True, "message": "Monthly schedule successfully saved"},
+                {
+                    "success": True,
+                    "message": "Schedules optimized",
+                    "results": results
+                },
                 status=status.HTTP_201_CREATED
             )
-        else:
-            return Response(
-                {'success': False, 'message': serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(
+            {'success': False, 'errors': serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
+    def process_schedule_item(self, item, user):
+        """Process one schedule date"""
+        date_str = item['date'].strftime('%Y-%m-%d')
+        
+        # 1. Calculate initial end_time based on operation_hour
+        self.set_initial_end_time(item)
+        
+        # 2. Generate all possible time slots
+        all_slots = self.generate_all_possible_slots(item)
+        
+        # 3. Calculate optimized lesson slots
+        lesson_slots = self.calculate_lesson_slots(item, all_slots)
+        
+        # 4. Auto-place breaks at valid boundaries
+        self.auto_place_breaks(item, lesson_slots)
+        
+        # 5. Save to database
+        self.save_schedule(item, user)
+        
+        return {
+            'date': date_str,
+            'start_time': item['start_time'].strftime('%H:%M'),
+            'end_time': item['end_time'].strftime('%H:%M'),
+            'total_lessons': len([s for s in lesson_slots if s['type'] == 'lesson']),
+            'total_gaps': len([s for s in lesson_slots if s['type'] == 'gap']),
+            'slots': self.format_slots_for_response(lesson_slots)
+        }
 
-    def calculate_lesson_slots(self, item):
-        """Calculate all possible lesson slots based on schedule, including gaps between lessons only"""
-        lesson_slots = []
-        if not item.get('lesson_duration'):
-            return lesson_slots
+    def set_initial_end_time(self, item):
+        """Set end_time based on start_time + operation_hour"""
+        start_datetime = datetime.combine(item['date'], item['start_time'])
+        end_datetime = start_datetime + timedelta(hours=item.get('operation_hour', 9))
+        item['end_time'] = end_datetime.time()
 
-        lesson_duration = item['lesson_duration']
-        lesson_gap = item.get('lesson_gap', 0)
+    def generate_all_possible_slots(self, item):
+        """Generate all possible time slots for the day"""
+        slots = []
         current_time = item['start_time']
         end_time = item['end_time']
-
-        while True:
-            lesson_end = (datetime.combine(datetime.today(), current_time) + 
-                        timedelta(hours=lesson_duration)).time()
-            
+        
+        while current_time < end_time:
+            # Lesson slot (always 1 hour)
+            lesson_end = (datetime.combine(item['date'], current_time) + 
+                        timedelta(hours=1)).time()
             if lesson_end > end_time:
                 break
-            
-            # Add the lesson slot
-            lesson_slots.append({
+            slots.append({
                 'type': 'lesson',
                 'start': current_time,
                 'end': lesson_end,
-                'formatted': f"{current_time.strftime('%H:%M')}-{lesson_end.strftime('%H:%M')}"
+                'duration': 60
             })
+            current_time = lesson_end
             
-            # Only add gap between lessons, not after breaks
-            if lesson_gap > 0 and lesson_end < end_time:
-                # Check if there's time for another lesson after the gap
-                potential_next_lesson_start = (datetime.combine(datetime.today(), lesson_end) + 
-                                            timedelta(minutes=lesson_gap)).time()
-                
-                potential_next_lesson_end = (datetime.combine(datetime.today(), potential_next_lesson_start) + 
-                                        timedelta(hours=lesson_duration)).time()
-                
-                # Only add gap if there's room for another full lesson after it
-                if potential_next_lesson_end <= end_time:
-                    gap_end = potential_next_lesson_start
-                    lesson_slots.append({
-                        'type': 'gap',
-                        'start': lesson_end,
-                        'end': gap_end,
-                        'formatted': f"{lesson_end.strftime('%H:%M')}-{gap_end.strftime('%H:%M')} (gap)"
-                    })
-                    current_time = gap_end
-                else:
-                    break
-            else:
-                current_time = lesson_end
-            
-            if current_time >= end_time:
+            # Gap slot (flexible duration)
+            gap_duration = min(
+                item.get('lesson_gap', 30),  # Default 30 mins
+                self.calculate_remaining_mins(current_time, end_time)
+            )
+            if gap_duration > 0:
+                gap_end = (datetime.combine(item['date'], current_time) + 
+                         timedelta(minutes=gap_duration)).time()
+                slots.append({
+                    'type': 'gap',
+                    'start': current_time,
+                    'end': gap_end,
+                    'duration': gap_duration
+                })
+                current_time = gap_end
+        
+        return slots
+
+    def calculate_lesson_slots(self, item, all_slots):
+        """Select which slots will be used for lessons"""
+        lesson_slots = []
+        remaining_mins = self.calculate_total_available_mins(item)
+        
+        for slot in all_slots:
+            if remaining_mins <= 0:
                 break
+                
+            if slot['type'] == 'lesson':
+                lesson_slots.append(slot)
+                remaining_mins -= slot['duration']
+            else:
+                # Only include gap if there's another lesson after it
+                next_lesson = next(
+                    (s for s in all_slots if s['type'] == 'lesson' and s['start'] >= slot['end']),
+                    None
+                )
+                if next_lesson:
+                    lesson_slots.append(slot)
+        
+        # Adjust end_time if we have remaining minutes
+        if remaining_mins > 0:
+            last_slot = lesson_slots[-1]
+            new_end = (datetime.combine(item['date'], last_slot['end']) + 
+                      timedelta(minutes=remaining_mins)).time()
+            item['end_time'] = new_end
+            lesson_slots.append({
+                'type': 'lesson',
+                'start': last_slot['end'],
+                'end': new_end,
+                'duration': remaining_mins,
+                'partial': True
+            })
         
         return lesson_slots
 
-    def validate_break_time(self, break_start, break_end, lesson_slots, break_name, date_str):
-        """
-        Validate break/extra space time against lessons
-        - Break must start exactly when a lesson ends or at schedule start
-        - Entire break period must not overlap with any lessons
-        """
-        # Get all valid break start times (lesson end times and schedule start)
-        valid_start_times = []
-        if lesson_slots:
-            valid_start_times.append(lesson_slots[0]['start'])  # Schedule start time
-            valid_start_times.extend([slot['end'] for slot in lesson_slots if slot['type'] == 'lesson'])
+    def auto_place_breaks(self, item, lesson_slots):
+        """Automatically adjust breaks to fit lesson boundaries"""
+        lesson_boundaries = [
+            slot['start'] for slot in lesson_slots if slot['type'] == 'lesson'
+        ] + [item['end_time']]
         
-        # Check if break starts at a valid time
-        starts_at_valid_time = any(break_start == start_time for start_time in valid_start_times)
-        
-        if not starts_at_valid_time:
-            available_starts = sorted(list(set(t.strftime('%H:%M') for t in valid_start_times)))
-            error = ValueError(
-                f"On {date_str}: {break_name} must start when a lesson ends or at schedule start. "
-                f"Available start times: {', '.join(available_starts)}"
+        if 'launch_break_start' in item:
+            closest = self.find_closest_boundary(
+                item['launch_break_start'], 
+                lesson_boundaries
             )
-            error.available_times = available_starts
-            raise error
+            item['launch_break_start'] = closest
+            item['launch_break_end'] = (datetime.combine(item['date'], closest) + 
+                                      timedelta(hours=1)).time()
         
-        # Check if break overlaps with any lessons
-        for slot in lesson_slots:
-            if slot['type'] == 'lesson':  # Only check against lessons, not gaps
-                if not (break_end <= slot['start'] or break_start >= slot['end']):
-                    available_starts = sorted(list(set(t.strftime('%H:%M') for t in valid_start_times)))
-                    error = ValueError(
-                        f"On {date_str}: {break_name} overlaps with lesson {slot['formatted']}. "
-                        f"Available start times: {', '.join(available_starts)}"
-                    )
-                    error.available_times = available_starts
-                    raise error
-
-    def validate_no_overlap(self, start1, end1, start2, end2, name1, name2, date_str):
-        """Validate two time ranges don't overlap"""
-        if not (end1 <= start2 or end2 <= start1):
-            raise ValueError(
-                f"On {date_str}: {name1} and {name2} overlap"
+        if 'extra_space_start' in item:
+            closest = self.find_closest_boundary(
+                item['extra_space_start'], 
+                lesson_boundaries
             )
+            item['extra_space_start'] = closest
+            item['extra_space_end'] = (datetime.combine(item['date'], closest) + 
+                                     timedelta(minutes=30)).time()
 
-    def validate_time_bounds(self, item, date_str):
-        """Validate all time elements are within schedule bounds"""
-        schedule_start = item['start_time']
-        schedule_end = item['end_time']
+    def find_closest_boundary(self, target_time, boundaries):
+        """Find closest lesson boundary to requested time"""
+        return min(
+            boundaries,
+            key=lambda x: abs(
+                datetime.combine(datetime.today(), x) - 
+                datetime.combine(datetime.today(), target_time)
+            )
+        )
 
-        if item.get('launch_break_start') and item.get('launch_break_end'):
-            if (item['launch_break_start'] < schedule_start or 
-                item['launch_break_end'] > schedule_end or
-                item['launch_break_start'] >= item['launch_break_end']):
-                raise ValueError(
-                    f"On {date_str}: Launch break must be within scheduled hours "
-                    f"({schedule_start.strftime('%H:%M')}-{schedule_end.strftime('%H:%M')})"
-                )
+    def calculate_remaining_mins(self, current_time, end_time):
+        """Calculate remaining minutes between two times"""
+        return int(
+            (datetime.combine(datetime.today(), end_time) - 
+            datetime.combine(datetime.today(), current_time)
+        ).total_seconds() / 60)
 
-        if item.get('extra_space_start') and item.get('extra_space_end'):
-            if (item['extra_space_start'] < schedule_start or 
-                item['extra_space_end'] > schedule_end or
-                item['extra_space_start'] >= item['extra_space_end']):
-                raise ValueError(
-                    f"On {date_str}: Extra space must be within scheduled hours "
-                    f"({schedule_start.strftime('%H:%M')}-{schedule_end.strftime('%H:%M')})"
-                )
+    def calculate_total_available_mins(self, item):
+        """Calculate total available minutes in the schedule"""
+        return int(
+            (datetime.combine(item['date'], item['end_time']) - 
+             datetime.combine(item['date'], item['start_time'])
+            ).total_seconds() / 60
+        )
 
-    def get_available_break_times(self, item):
-        """Calculate available times for breaks/extra spaces that don't conflict with lessons"""
-        lesson_slots = self.calculate_lesson_slots(item)
-        available_slots = []
+    def format_slots_for_response(self, slots):
+        """Format time slots for API response"""
+        return [
+            {
+                'type': slot['type'],
+                'start': slot['start'].strftime('%H:%M'),
+                'end': slot['end'].strftime('%H:%M'),
+                'duration': slot.get('duration', 0),
+                'partial': slot.get('partial', False)
+            }
+            for slot in slots
+        ]
         
-        # If no lessons, the whole schedule is available
-        if not lesson_slots:
-            return [f"{item['start_time'].strftime('%H:%M')}-{item['end_time'].strftime('%H:%M')}"]
+    def save_schedule(self, item, user):
+        """Save optimized schedule to database"""
+        item['user'] = user
+        vehicle = item.get('vehicle_id') or Vehicle.objects.first()
+        defaults = {
+            'start_time': item['start_time'],
+            'end_time': item['end_time'],
+            'lesson_gap': item['lesson_gap'],
+            'lesson_duration': item['lesson_duration'],
+            'operation_hour': item.get('operation_hour'),
+            'launch_break_start': item.get('launch_break_start'),
+            'launch_break_end': item.get('launch_break_end'),
+            'extra_space_start': item.get('extra_space_start'),
+            'extra_space_end': item.get('extra_space_end'),
+            'user': user
+        }
         
-        # Check time before first lesson
-        first_lesson_start = lesson_slots[0]['start']
-        if item['start_time'] < first_lesson_start:
-            available_slots.append(f"{item['start_time'].strftime('%H:%M')}-{first_lesson_start.strftime('%H:%M')}")
-        
-        # Check times between lessons
-        for i in range(len(lesson_slots)-1):
-            current_end = lesson_slots[i]['end']
-            next_start = lesson_slots[i+1]['start']
-            if current_end < next_start:
-                available_slots.append(f"{current_end.strftime('%H:%M')}-{next_start.strftime('%H:%M')}")
-        
-        # Check time after last lesson
-        last_lesson_end = lesson_slots[-1]['end']
-        if last_lesson_end < item['end_time']:
-            available_slots.append(f"{last_lesson_end.strftime('%H:%M')}-{item['end_time'].strftime('%H:%M')}")
-        
-        return available_slots if available_slots else ["No available time slots"]
+        schedule, created = MonthlySchedule.objects.update_or_create(
+            date=item['date'],
+            vehicle=vehicle,
+            user=user,
+            defaults=defaults
+        )
+        return schedule
     
     def get(self, request):
         date = request.query_params.get('date')
