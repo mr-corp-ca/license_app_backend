@@ -196,9 +196,9 @@ class SignInView(APIView):
                         
         user = User.objects.filter(phone_number=phone_number).first()
 
-        if user:
-            if user.user_type == 'school' and not user.user_status == 'accepted':
-                return Response({'success': False, 'response': {'message': "Your school's registration is pending approval or has not been accepted."}}, status=status.HTTP_400_BAD_REQUEST)
+        # if user:
+        #     if user.user_type == 'school' and not user.user_status == 'accepted':
+        #         return Response({'success': False, 'response': {'message': "Your school's registration is pending approval or has not been accepted."}}, status=status.HTTP_400_BAD_REQUEST)
 
         
         try:
